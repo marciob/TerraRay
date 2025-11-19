@@ -1,0 +1,85 @@
+
+# **Building for the Rayls Public Chain**
+
+Rayls is a public EVM chain built using Reth, the high-performance Ethereum execution client from Paradigm. Rayls is 100% EVM compatible, meaning any Ethereum contracts, tooling, or wallets work without modification.
+
+This guide explains how to deploy, interact, and build on Rayls.
+
+---
+
+## **Key Properties**
+
+**Feature | Detail**
+Execution Client | **Reth** (Rust-based Ethereum execution client)
+Virtual Machine | **EVM (fully compatible)**
+Address Format | Standard Ethereum `0x...` addresses
+Gas Token | **USDgas**
+JSON-RPC Compatibility | Fully aligned with Ethereum
+
+No new tooling required. If it works on Ethereum, it works on Rayls.
+
+---
+
+## **Testnet Network Information**
+
+**Network:** Rayls Testnet
+**Chain ID:** 123123
+**RPC Endpoint:** [https://devnet-rpc.rayls.com](https://devnet-rpc.rayls.com)
+**Explorer:** [https://devnet-explorer.rayls.com](https://devnet-explorer.rayls.com)
+**Gas Token:** USDgas
+
+---
+
+## **Tooling Compatibility**
+
+Tooling | Status
+Foundry | ✔️ Supported
+Hardhat | ✔️ Supported
+Truffle | ✔️ Supported
+Remix | ✔️ Supported (connect custom RPC)
+Wagmi / Viem / Ethers.js | ✔️ Supported
+WalletConnect | ✔️ Supported
+Rabby / MetaMask / OKX Wallet | ✔️ Supported
+
+---
+
+## **Deploy using Foundry**
+
+```
+forge create --rpc-url https://devnet-rpc.rayls.com --private-key <PRIVATE_KEY> src/MyContract.sol:MyContract
+```
+
+---
+
+## **Deploy using Hardhat**
+
+**hardhat.config.js:**
+
+```js
+module.exports = {
+  networks: {
+    rayls: {
+      url: "https://devnet-rpc.rayls.com",
+      accounts: [process.env.PRIVATE_KEY]
+    }
+  }
+};
+```
+
+**Deploy:**
+
+```
+npx hardhat run scripts/deploy.js --network rayls
+```
+
+---
+
+## **Summary**
+
+Rayls is a Reth-powered EVM chain that supports standard Ethereum contract deployment and developer workflows.
+If you know how to build on Ethereum, you already know how to build on Rayls.
+
+No new languages.
+No new frameworks.
+Just deploy.
+

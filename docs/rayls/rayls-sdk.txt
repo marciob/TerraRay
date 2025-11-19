@@ -1,0 +1,1948 @@
+Building using Rayls SDK
+The Rayls SDK is a powerful and flexible tool designed to facilitate the development of decentralized applications (dApps) that interact with the Rayls protocol, an advanced cross-chain protocol. With this SDK, developers can easily integrate cross-chain communication functionalities, enabling the secure and efficient transfer of data and assets between different blockchains.
+
+Key Features
+Cross-Chain Message Sending: Send and receive messages between different chains using simplified functions that abstract the complexity of cross-chain communication.
+Endpoint Management: Configure and manage endpoints to facilitate secure and reliable communication between your decentralized applications and various blockchains.
+Resource Registration: Efficiently associate resource IDs with contract addresses, ensuring the integrity and traceability of transferred assets and data.
+Transfer Metadata: Use detailed metadata to track and manage asset transfers between chains, enhancing the transparency and control of cross-chain operations.
+Advantages
+Simplified Integration: With clear interfaces and comprehensive documentation, the Rayls SDK enables developers to quickly integrate cross-chain functionalities into their applications.
+Robust Security: Based on advanced security practices, the SDK ensures that all cross-chain communications are protected against interference and malicious attacks.
+Flexibility and Scalability: Designed to support a wide variety of use cases and be scalable as project needs grow.
+How to Use
+Installation: Import the Rayls SDK into your Solidity development project.
+Configuration: Initialize the SDK with the desired Rayls endpoint address and configure the necessary parameters.
+Implementation: Use the functions provided by the SDK to send messages, register resources, and manage endpoints, facilitating communication between different blockchains.
+Usage Examples
+Token Transfer: Securely and efficiently transfer tokens between different chains.
+Contract Registration: Register contracts and associate resource IDs to facilitate asset tracking and management.
+Transfer Monitoring: Use transfer metadata to track the status and history of cross-chain operations.
+The Rayls SDK is the ideal choice for developers looking to simplify the integration of cross-chain functionalities into their decentralized applications, offering a robust, secure, and easy-to-use solution.
+
+######
+
+Installing the Rayls SDK
+Prerequisites
+The SDK must be installed in a blockchain that supports Rayls, that is, an EVM-compatible blockchain with a Rayls endpoint smart contract setup.
+
+If you have any questions, please contact us here
+
+Installation
+via pnpm
+Text
+
+pnpm add @rayls/contracts
+via npm
+Text
+
+npm install @rayls/contracts --save
+Description
+SDK stands for Software Development Kit. On Rayls, this means all of the interfaces, types, utils, contracts and much more you need to interact with the endpoint -- and therefore teleport your message to other blockchains.
+
+The most important contract on the SDK is RaylsApp, and that's because it is the one responsible to concentrate all the "Rayls" methods, that is, the methods that interact with the endpoint, which in turn interact with the Subent Hub and so on, such as sending a payload cross-chain to an address or to a resourceId
+
+Other than that, the SDK offers some pre-made contracts inheriting from RaylsApp in order to demonstrate what can be done with it. One example is the RaylsErc20Handler.sol, which inherits not only RaylsApp but also Erc20, implementing all needed functionalities to be a "Rayls Erc20", e.g. capable of transacting cross-chain. Here is a snapshot of the contract:
+
+sol
+
+abstract contract RaylsErc20Handler is RaylsApp, ERC20, Initializable, Ownable {
+    string tokenName;
+    string tokenSymbol;
+    mapping(address => uint256) lockedAmount;
+
+	constructor(string memory _name, string memory _symbol, address _endpoint, address _owner) 
+		ERC20(_name, _symbol) 
+		RaylsApp(_endpoint) 
+		Ownable(_owner)
+    {
+        tokenName = _name;
+        tokenSymbol = _symbol;
+        _disableInitializers();
+    }
+  
+  // More methods down here ...
+Notice that RaylsErc20Handler.sol is just a base point, an implementation suggestion, but you are free to implement it in any other way -- or any other contract. As long as you inherit RaylsApp.sol, your contract will have access to the necessary methods to communicate with the Rayls infrastructure.
+
+Examples
+We'll go over some scenarios using the SDK: setting up a token, token minting and a token teleport using the RaylsErc20Handler.sol and sending arbitrary messages using RaylsApp.
+
+Setting up a Token
+As seen on the RaylsErc20Handler.sol constructor, it requires:
+
+A _name for the token
+A _symbol for the token
+The blockchain's _endpoint address
+The token _owner's address
+By deploying the contract with such information, you have an ERC20 token with all needed capabilities, from standard minting and burning to Rayls teleporting and reverting.
+
+Of course, you can even extend the RaylsErc20Handler and add your desired methods.
+
+sol
+
+contract Erc20TokenExample is RaylsErc20Handler {
+    constructor(
+        string memory _name,
+        string memory _symbol,
+        address _endpoint
+    )
+        RaylsErc20Handler(
+            _name,
+            _symbol,
+            _endpoint,
+            msg.sender
+        )
+    {
+        _mint(msg.sender, 2000);
+    }
+Token Minting
+Once you have your token setup, you can:
+
+Mint using mint from RaylsErc20Handler.sol
+Solidity
+
+/**
+     * @dev Mint new tokens and submit an update to the Private Network Hub (CommitChain).
+     * @param to The address to which the new tokens will be minted.
+     * @param value The amount of tokens to mint.
+*/
+function mint(address to, uint256 value) public virtual onlyOwner {
+  _mint(to, value);
+  uint8 updateType = 1;
+  _submitTokenUpdate(value, updateType);
+}
+As can be seen in the method, you have to inform the address to where the tokens will be minted and the value of the token to mint. Then, the native Erc20 _mint method is used and the token is minted. Another procedure is done, which is updating the Private Network Hub's TokenRegistry with your new balance.
+
+This is the formal and correct way to mint a token because it keeps the Private Network Hub updated about it, and thus allows for the correct procedure of teleporting tokens cross-chain.
+
+However, if your intent is to just test token minting internally on the PL, you can use the other method for minting.
+
+Mint using any other mint method implemented by you
+As can be seen on the Erc20TokenExample.sol above, on the Setting up a Token section, you can, for example, create a token that mints some amount of the token as soon as it is created to the address of your choice, on the constructor.
+
+You can also, of course, implement a public mint method that redirects its parameters to the native Erc20 _mint method and so on. Feel free to choose whatever fits best your needs (figuring out Rayls features, testing etc).
+
+Solidity
+
+/**
+     * @dev Mint new tokens and submit an update to the Private Network Hub (CommitChain).
+     * @param to The address to which the new tokens will be minted.
+     * @param value The amount of tokens to mint.
+*/
+function mint(address to, uint256 value) public {
+  _mint(to, value);
+}
+Just keep in mind: official cross-chain transactions will only be recognized and allowed by the Private Network Hub if the TokenRegistry is properly informed and updated of them.
+
+Token Teleport
+Teleporting a token cross-chain is basically sending a payload cross-chain (which is a functionality present in RaylsApp.sol) requesting the receiver to mint the token amount while the sender burns the token amount.
+
+As with the minting, it can also be done by your implementation, but we'll have a look here at some of the RaylsErc20Handler.sol's implementation:
+
+Solidity
+
+function teleport(address to, uint256 value, uint256 chainId) public virtual returns (bool) {
+  _burn(msg.sender, value);
+
+  BridgedTransferMetadata memory transferMetadata = BridgedTransferMetadata({
+    assetType: RaylsBridgeableERC.ERC20,
+    id: 0,
+    from: msg.sender,
+    to: to,
+    amount: value
+  });
+
+  sendTeleport(
+    chainId,
+    abi.encodeWithSignature("receiveTeleport(address,uint256)", to, value),
+    bytes(""),
+    bytes(""),
+    bytes(""),
+    transferMetadata
+  );
+  return true;
+}
+
+function sendTeleport(
+  uint256 chainId,
+  bytes memory _payload,
+  bytes memory _lockDataPayload,
+  bytes memory _revertDataPayloadSender,
+  bytes memory _revertDataPayloadReceiver,
+  BridgedTransferMetadata memory transferMetadata
+) internal {
+  require(resourceId != bytes32(0), "Token not registered.");
+
+  _raylsSendToResourceId(
+    chainId,
+    resourceId,
+    _payload,
+    _lockDataPayload,
+    _revertDataPayloadSender,
+    _revertDataPayloadReceiver,
+    transferMetadata
+  );
+}
+
+function receiveTeleport(address to, uint256 value) public virtual receiveMethod {
+  _mint(to, value);
+}
+As can be seen, you inform the address and the chainId you are sending to, and the value you are sending, and it will make and send a payload cross-chain, activating the receiveTeleport method in the receiver, which will mint the respective value in the to address.
+
+Arbitrary Messages
+Arbitrary messages are any bytes payload you wish to send cross-chain. With the RaylsApp.sol methods, it gets really simple to send one.
+
+The simplest method is _raylsSend, where all it requires is:
+
+The _dstChainId (destination chainId) number
+The _destination address
+The _payload to send, in bytes
+sol
+
+{
+    
+    function _raylsSend(
+        uint256 _dstChainId,
+        address _destination,
+        bytes memory _payload
+    ) internal virtual {
+        endpoint.send(_dstChainId, _destination, _payload);
+    }
+    
+}
+Of course, you can always extend the RaylsApp.sol and add your desired methods.
+
+Solidity
+
+contract ArbitraryMessage is RaylsApp {
+    string public msg;
+    BridgedTransferMetadata private emptyMetadata;
+
+  constructor(address _endpoint) RaylsApp(_endpoint) {}
+
+    function sendMessage(bytes32 _resourceId, string memory message, uint256 destChainId) public {
+        _raylsSendToResourceId(
+            destChainId,
+            _resourceId, 
+            abi.encodeWithSelector(this.receiveMsg.selector, message),
+            "",
+            "",
+            "",
+            emptyMetadata
+        );
+    }
+
+    function receiveMsg(string memory _msg) public {
+        msg = _msg;
+    }
+}
+As can be seen in this example, both the sender and the destination will deploy the contract. Then, the sender can call the sendMessage method to the destination _resourceId and destChainId with a message. The payload is then encoded to activate the receiveMsg method in the receiver with the parameter message. Thus, the message sent by the sender is gonna be stored on the msg variable of the receiver. Finally, we have successfully sent an arbitrary string message from the sender to the receiver.
+
+
+#######
+
+RaylsApp
+Definition
+RaylsApp is the anchor of the Rayls SDK. It presents all the necessary methods to interact with the endpoint, which allows cross-chain messages, the heart of Rayls.
+
+Methods
+If you wish to explore the contract on your own, it can be found in the section below. Here we'll highlight only some of the main methods.
+
+_raylsSend
+Solidity
+
+/**
+ * @dev Internal function to interact with the Rayls Endpoint.send() for sending a message.
+ * @param _dstChainId The destination endpoint ID.
+ * @param _destination The destination address.
+ * @param _payload payload of message.
+*/
+function _raylsSend(
+  uint256 _dstChainId,
+  address _destination,
+  bytes memory _payload
+) internal virtual {
+  endpoint.send(_dstChainId, _destination, _payload);
+}
+This is the simplest way to send a payload crosschain: All you need to inform is the payload bytes, and the destination address and chainId.
+
+_raylsSendToResourceId
+Solidity
+
+/**
+ * @dev Internal function to interact with the Rayls Endpoint.send() for sending a message.
+ * @param _dstChainId The destination endpoint ID.
+ * @param _resourceId The id of the resource.
+ * @param _payload payload of message.
+*/
+function _raylsSendToResourceId(
+  uint256 _dstChainId,
+  bytes32 _resourceId,
+  bytes memory _payload
+) internal virtual {
+  endpoint.sendToResourceId(
+    _dstChainId,
+    _resourceId,
+    _payload
+  );
+}
+Instead of the destination address, you can use this method to send to a resourceId instead.
+
+Contract
+Solidity
+
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+import "./interfaces/IRaylsEndpoint.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import "./RaylsMessage.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "./libraries/MessageLib.sol";
+
+abstract contract RaylsApp {
+    //The Rayls endpoint associated the given RaylsApp
+    IRaylsEndpoint internal endpoint;
+    bytes32 public resourceId;
+
+    /**
+     * @dev Constructor to initialize the RaylsCore with the provided endpoint and owner.
+     * @param _endpoint The address of the Rayls endpoint.
+     */
+    constructor(address _endpoint) {
+        endpoint = IRaylsEndpoint(_endpoint);
+    }
+
+    /**
+     * @dev Get the address of the implementation of the resource.
+     * @param _resourceId The resourceId of the RaylsApp.
+     */
+    function getAddressByResourceId(
+        bytes32 _resourceId
+    ) external view returns (address) {
+        return endpoint.getAddressByResourceId(_resourceId);
+    }
+
+    /**
+     * @dev Internal function to interact with the Rayls Endpoint.send() for sending a message.
+     * @param _dstChainId The destination endpoint ID.
+     * @param _destination The destination address.
+     * @param _payload payload of message.
+     */
+    function _raylsSend(
+        uint256 _dstChainId,
+        address _destination,
+        bytes memory _payload
+    ) internal virtual {
+        endpoint.send(_dstChainId, _destination, _payload);
+    }
+
+    /**
+     * @dev Internal function to interact with the Rayls Endpoint.sendBatch() for sending multiple messages.
+     * @param _destinationPayloadRequests The payloads to send to the destination contract.
+     */
+    function _raylsSendBatch(
+        DestinationPayloadRequest[] calldata _destinationPayloadRequests
+    ) internal virtual {
+        endpoint.sendBatch(_destinationPayloadRequests);
+    }
+
+    /**
+     * @dev Internal function to interact with the Rayls Endpoint.send() for sending a message.
+     * @param _dstChainId The destination endpoint ID.
+     * @param _resourceId The id of the resource.
+     * @param _payload payload of message.
+     */
+    function _raylsSendToResourceId(
+        uint256 _dstChainId,
+        bytes32 _resourceId,
+        bytes memory _payload
+    ) internal virtual {
+        endpoint.sendToResourceId(
+            _dstChainId,
+            _resourceId,
+            _payload
+        );
+    }
+
+    /**
+     * @dev Internal function to interact with the Rayls Endpoint.sendBatchToResourceId() for sending multiple messages.
+     * @param _resourceIdPayloadRequests The verified payloads to send to the destination contract.
+     */
+    function _raylsSendBatchToResourceId(
+        ResourceIdPayloadRequest[] memory _resourceIdPayloadRequests
+    ) internal virtual {
+        endpoint.sendBatchToResourceId(
+            _resourceIdPayloadRequests
+        );
+    }
+
+    /**
+     * @dev Internal function to interact with the Rayls Endpoint.send() for sending a message.
+     * @param _dstChainId The destination endpoint ID.
+     * @param _resourceId The id of the resource.
+     * @param _payload payload of message.
+     * @param _lockData The lockData
+     * @param _revertDataPayloadSender The revertData for the sender chainId
+     * @param _revertDataPayloadReceiver The revertData for the receiver chainId
+     */
+    function _raylsSendToResourceId(
+        uint256 _dstChainId,
+        bytes32 _resourceId,
+        bytes memory _payload,
+        bytes memory _lockData,
+        bytes memory _revertDataPayloadSender,
+        bytes memory _revertDataPayloadReceiver,
+        BridgedTransferMetadata memory transferMetadata
+    ) internal virtual {
+        endpoint.sendToResourceId(
+            _dstChainId,
+            _resourceId,
+            _payload,
+            _lockData,
+            _revertDataPayloadSender,
+            _revertDataPayloadReceiver,
+            transferMetadata
+        );
+    }
+
+    /**
+     * @dev Internal function to interact with the Rayls Endpoint.sendBatchToResourceId() for sending multiple messages.
+     * @param _resourceIdPayloadRequests The verified payloads to send to the destination contract.
+    */
+    function _raylsSendBatchToResourceId(
+        ResourceIdCompletePayloadRequest[] memory _resourceIdPayloadRequests
+    ) internal virtual {
+        endpoint.sendBatchToResourceId(
+            _resourceIdPayloadRequests
+        );
+    }
+
+    /**
+     * @dev Internal function to associate the resourceId with the contracts address
+     */
+    function _registerResourceId() internal virtual {
+        require(
+            resourceId != bytes32(0),
+            "Only register resource when it's approved"
+        );
+        endpoint.registerResourceId(resourceId, address(this));
+    }
+
+    /**
+     * @dev Extracts the resourceId, a 32 bytes type, from the call data during contract initialization.
+     * Only works on contract initialization method when a resource is deploying.
+     * This method assumes the resourceId is located at the end of the call data.
+     *
+     * @return _resourceId The extracted resourceId from the initialization call data. Returns
+     * a zero value if the call data is not long enough to include this information.
+     */
+    function _getResourceIdOnInitialize()
+        internal
+        pure
+        returns (bytes32 _resourceId)
+    {
+        if (msg.data.length >= 32) {
+            assembly {
+                _resourceId := calldataload(sub(calldatasize(), 32))
+            }
+        }
+    }
+
+    /**
+     * @dev Extracts the owner's address from the call data during contract initialization.
+     * Only works on contract initialization method when endpoint is deploying the resource.
+     *
+     * @return _owner The extracted owner address from the initialization call data. Returns the
+     * zero address if the call data is not long enough to include an address.
+     */
+    function _getOwnerAddressOnInitialize()
+        internal
+        pure
+        returns (address _owner)
+    {
+        if (msg.data.length >= 52) {
+            assembly {
+                _owner := shr(96, calldataload(sub(calldatasize(), 52)))
+            }
+        }
+    }
+
+    /**
+     * @dev Extracts the Endpoint's address from the call data during contract initialization.
+     * Only works on contract initialization method when endpoint is deploying the resource.
+     *
+     * @return _endpoint The extracted Endpoint address from the initialization call data. Returns
+     * the zero address if the call data is not long enough to include this information.
+     */
+    function _getEndpointAddressOnInitialize()
+        internal
+        pure
+        returns (address _endpoint)
+    {
+        if (msg.data.length >= 72) {
+            assembly {
+                _endpoint := shr(96, calldataload(sub(calldatasize(), 72)))
+            }
+        }
+    }
+
+    modifier receiveMethod() {
+        require(
+            endpoint.isTrustedExecutor(msg.sender),
+            "This is a receive method. Only endpoint's executor can call this method."
+        );
+        _;
+    }
+
+    modifier onlyFromCommitChain() {
+        require(
+            _getFromChainIdOnReceiveMethod() == endpoint.getCommitChainId(),
+            "This method only receive calls from commit chain."
+        );
+        _;
+    }
+
+    /**
+     * @notice Retrieve messageId from message data. Only works on receive methods being called by
+     * Endpoint when receiving cross-chain call.
+     * @return _msgDataMessageId ID uniquely identifying the message that was executed
+     */
+    function _getMessageIdOnReceiveMethod()
+        internal
+        pure
+        returns (bytes32 _msgDataMessageId)
+    {
+        _msgDataMessageId;
+
+        if (msg.data.length >= 84) {
+            assembly {
+                _msgDataMessageId := calldataload(sub(calldatasize(), 84))
+            }
+        }
+    }
+
+    /**
+     * @notice Retrieve fromChainId from message data. Only works on receive methods being called by
+     * Endpoint when receiving cross-chain call.
+     * @return _msgDataFromChainId ID of the chain that dispatched the messages
+     */
+    function _getFromChainIdOnReceiveMethod()
+        internal
+        pure
+        returns (uint256 _msgDataFromChainId)
+    {
+        _msgDataFromChainId;
+
+        if (msg.data.length >= 52) {
+            assembly {
+                _msgDataFromChainId := calldataload(sub(calldatasize(), 52))
+            }
+        }
+    }
+
+    /**
+     * @notice Retrieve signer address from message data. Only works on receive methods being called by
+     * Endpoint when receiving cross-chain call.
+     * @return _signer Address of the signer
+     */
+    function _getMsgSenderOnReceiveMethod()
+        internal
+        view
+        returns (address payable _signer)
+    {
+        _signer = payable(msg.sender);
+
+        if (msg.data.length >= 20) {
+            assembly {
+                _signer := shr(96, calldataload(sub(calldatasize(), 20)))
+            }
+        }
+    }
+
+    /**
+     * @dev Update the endpoint.
+     *
+     */
+    function _updateEndpoint(address _endpoint) public virtual {
+        endpoint = IRaylsEndpoint(_endpoint);
+    }
+
+    /**
+     * @dev Get the endpoint address.
+     * @return _endpoint Address of the endpoint.
+     *
+     */
+    function _getEndpointAddress() public view virtual returns (address) {
+        return address(endpoint);
+    }
+}
+
+
+#######
+
+RaylsErc20Handler
+Definition
+In Rayls SDK, apart from what you can build using the base contract RaylsApp, we offer other contracts to complement and ease your implementations. Here, you will see the handler for Erc20, which inherits from RaylsApp — to become integrated to Rayls — and also, of course, from Erc20.
+
+Methods
+If you wish to explore the contract on your own, it can be found in the section below. Here we'll highlight only some of the main methods.
+
+Constructor
+Solidity
+
+abstract contract RaylsErc20Handler is RaylsApp, ERC20, Initializable, Ownable {
+    string tokenName;
+    string tokenSymbol;
+    mapping(address => uint256) lockedAmount;
+    /**
+     * @dev Constructor to initialize the RaylsCore with the provided endpoint and owner.
+     * @param _endpoint The address of the Rayls endpoint.
+     * @param _owner The address of the owner of the RaylsCore.
+     */
+
+    constructor(string memory _name, string memory _symbol, address _endpoint, address _owner)
+        ERC20(_name, _symbol)
+        RaylsApp(_endpoint)
+        Ownable(_owner)
+    {
+        tokenName = _name;
+        tokenSymbol = _symbol;
+        _disableInitializers();
+    }
+  
+  	// ...
+}
+As we can see, we have the standard _name and _symbol to represent the ERC20 in the constructor, as well as the _endpoint for the RaylsApp and an address to set as the _owner
+
+initialize
+Solidity
+
+function initialize(string memory _name, string memory _symbol, uint8 decimals) public initializer {
+    address _owner = _getOwnerAddressOnInitialize();
+    address _endpoint = _getEndpointAddressOnInitialize();
+    resourceId = _getResourceIdOnInitialize();
+    // ERC20 initizalization
+    tokenName = _name;
+    tokenSymbol = _symbol;
+    decimals = decimals;
+    // RaylsApp Initialization
+    _transferOwnership(_owner);
+    endpoint = IRaylsEndpoint(_endpoint);
+}
+As this contract can be used by proxy contracts, we need to do the initializations in a standard methods, not on the constructor (otherwise the proxy contract state won't be updated properly).
+
+mint & burn
+Solidity
+
+/**
+     * @dev Mint new tokens and submit an update to the Private Network Hub (CommitChain).
+     * @param to The address to which the new tokens will be minted.
+     * @param value The amount of tokens to mint.
+*/
+function mint(address to, uint256 value) public virtual onlyOwner {
+    _mint(to, value);
+    uint8 updateType = 1;
+    _submitTokenUpdate(value, updateType);
+}
+
+/**
+     * @dev Burn tokens and submit an update to the Private Network Hub (CommitChain).
+     * @param from The address from which the tokens will be burned.
+     * @param value The amount of tokens to burn.
+*/
+function burn(address from, uint256 value) public virtual onlyOwner {
+    _burn(from, value);
+    uint8 updateType = 0;
+    _submitTokenUpdate(value, updateType);
+}
+Given we are on Rayls, if we want our token to be validated cross-chain, both mint & burn activities must be not only done inside the PL but also sent to the Private Network Hub — that's what _submitTokenUpdate does.
+
+_submitTokenUpdate
+Solidity
+
+/**
+     * @dev Submit a token balance update to the Private Network Hub (CommitChain).
+     * @param amount The amount of tokens to update.
+     * @param updateType The type of update (0 for burn, 1 for mint).
+*/
+function submitTokenUpdate(uint256 amount, uint8 updateType) public virtual onlyOwner {
+    _submitTokenUpdate(amount, updateType);
+}
+
+/**
+     * @dev Internal function to submit a token balance update to the Private Network Hub (CommitChain). This function encodes a function call to the TokenRegistry contract.
+     * @param amount The amount of tokens to update.
+     * @param updateType The type of update (0 for burn, 1 for mint).
+*/
+function _submitTokenUpdate(uint256 amount, uint8 updateType) internal {
+    _raylsSend(
+        endpoint.getCommitChainId(),
+        endpoint.getCommitChainAddress("TokenRegistry"),
+        abi.encodeWithSignature(
+            "updateTokenBalance(uint256,uint256,bytes32,uint8)",
+            endpoint.getChainId(),
+            amount,
+            resourceId,
+            updateType
+        )
+    );
+}
+Here we use a RaylsApp functionality, _raylsSend, to communicate cross-chain with the Private Network Hub and inform the TokenRegistry that we are either minting or burning a certain amount of the token
+
+sendTeleport
+Solidity
+
+function sendTeleport(
+    uint256 chainId,
+    bytes memory _payload,
+    bytes memory _lockDataPayload,
+    bytes memory _revertDataPayloadSender,
+    bytes memory _revertDataPayloadReceiver,
+    BridgedTransferMetadata memory transferMetadata
+) internal {
+    require(resourceId != bytes32(0), "Token not registered.");
+
+    _raylsSendToResourceId(
+        chainId,
+        resourceId,
+        _payload,
+        _lockDataPayload,
+        _revertDataPayloadSender,
+        _revertDataPayloadReceiver,
+        transferMetadata
+    );
+}
+The base of every following teleport method: It basically proxies the request to the RaylsApp method _raylsSendToResourceId, which sends a payload (including possible atomic revert mechanisms) cross-chain.
+
+teleport
+Solidity
+
+function teleport(address to, uint256 value, uint256 chainId) public virtual returns (bool) {
+    _burn(msg.sender, value);
+
+    BridgedTransferMetadata memory transferMetadata = BridgedTransferMetadata({
+      assetType: RaylsBridgeableERC.ERC20,
+      id: 0,
+      from: msg.sender,
+      to: to,
+      amount: value
+    });
+
+    sendTeleport(
+      chainId,
+      abi.encodeWithSignature("receiveTeleport(address,uint256)", to, value),
+      bytes(""),
+      bytes(""),
+      bytes(""),
+      transferMetadata
+    );
+
+    return true;
+}
+A method to teleport (send cross-chain) an amount of the token. This is a vanilla teleport, which means there are no revert mechanisms, that is, it assumes the transaction will be a success.
+
+teleportFrom
+Solidity
+
+function teleportFrom(address from, address to, uint256 value, uint256 chainId) public virtual returns (bool) {
+    address spender = _msgSender();
+    _spendAllowance(from, spender, value);
+    _burn(from, value);
+
+    BridgedTransferMetadata memory transferMetadata = BridgedTransferMetadata({
+      assetType: RaylsBridgeableERC.ERC20,
+      id: 0,
+      from: from,
+      to: to,
+      amount: value
+    });
+
+    sendTeleport(
+      chainId,
+      abi.encodeWithSignature("receiveTeleport(address,uint256)", to, value),
+      bytes(""),
+      bytes(""),
+      bytes(""),
+      transferMetadata
+    );
+
+    return true;
+}
+A method to teleport (send cross-chain) an amount of the token, but spending an allowance from other adress. This is a vanilla teleport, which means there are no revert mechanisms, that is, it assumes the transaction will be a success.
+
+teleportAtomic
+Solidity
+
+function teleportAtomic(address to, uint256 value, uint256 destinationChainId) public virtual returns (bool) {
+    _burn(msg.sender, value);
+
+    BridgedTransferMetadata memory transferMetadata = BridgedTransferMetadata({
+      assetType: RaylsBridgeableERC.ERC20,
+      id: 0,
+      from: msg.sender,
+      to: to,
+      amount: value
+    });
+
+    sendTeleport(
+      destinationChainId,
+      abi.encodeWithSignature("receiveTeleportAtomic(address,uint256)", to, value),
+      abi.encodeWithSignature("unlock(address,uint256)", to, value),
+      abi.encodeWithSignature("revertTeleportMint(address,uint256)", msg.sender, value),
+      abi.encodeWithSignature("revertTeleportBurn(address,uint256)", msg.sender, value),
+      transferMetadata
+    );
+ 
+    return true;
+}
+A method to teleport (send cross-chain) an amount of the token. This is an atomic teleport, which means there are revert mechanisms, that is, if the transaction fails by some reason, it will be reverted.
+
+teleportAtomicFrom
+Solidity
+
+function teleportAtomicFrom(
+  	address from, 
+  	address to, 
+  	uint256 value, 
+  	uint256 destinationChainId
+) public virtual returns (bool)
+{
+    address spender = _msgSender();
+    _spendAllowance(from, spender, value);
+    _burn(from, value);
+
+    BridgedTransferMetadata memory transferMetadata = BridgedTransferMetadata({
+      assetType: RaylsBridgeableERC.ERC20,
+      id: 0,
+      from: from,
+      to: to,
+      amount: value
+    });
+
+    sendTeleport(
+      destinationChainId,
+      abi.encodeWithSignature("receiveTeleportAtomic(address,uint256)", to, value),
+      abi.encodeWithSignature("unlock(address,uint256)", to, value),
+      abi.encodeWithSignature("revertTeleportMint(address,uint256)", from, value),
+      abi.encodeWithSignature("revertTeleportBurn(address,uint256)", from, value),
+      transferMetadata
+    );
+    return true;
+}
+A method to teleport (send cross-chain) an amount of the token, but spending an allowance from other adress. This is an atomic teleport, which means there are revert mechanisms, that is, if the transaction fails by some reason, it will be reverted.
+
+Contract
+Solidity
+
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+import {RaylsApp} from "../RaylsApp.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "../interfaces/IRaylsEndpoint.sol";
+import "../RaylsMessage.sol";
+import "../libraries/Pedersen/Curve.sol";
+import "../libraries/SharedObjects.sol";
+import "../libraries/Utils.sol";
+
+abstract contract RaylsErc20Handler is RaylsApp, ERC20, Initializable, Ownable {
+    string tokenName;
+    string tokenSymbol;
+    mapping(address => uint256) lockedAmount;
+    /**
+     * @dev Constructor to initialize the RaylsCore with the provided endpoint and owner.
+     * @param _endpoint The address of the Rayls endpoint.
+     * @param _owner The address of the owner of the RaylsCore.
+     */
+
+    constructor(string memory _name, string memory _symbol, address _endpoint, address _owner)
+        ERC20(_name, _symbol)
+        RaylsApp(_endpoint)
+        Ownable(_owner)
+    {
+        tokenName = _name;
+        tokenSymbol = _symbol;
+        _disableInitializers();
+    }
+
+    function initialize(string memory _name, string memory _symbol, uint8 decimals) public initializer {
+        address _owner = _getOwnerAddressOnInitialize();
+        address _endpoint = _getEndpointAddressOnInitialize();
+        resourceId = _getResourceIdOnInitialize();
+        // ERC20 initizalization
+        tokenName = _name;
+        tokenSymbol = _symbol;
+        decimals = decimals;
+        // RaylsApp Initialization
+        _transferOwnership(_owner);
+        endpoint = IRaylsEndpoint(_endpoint);
+    }
+    /**
+     * @dev Returns the name of the token.
+     * Overrided method to allow erc20 to be initializable
+     */
+
+    function name() public view override returns (string memory) {
+        return tokenName;
+    }
+
+    /**
+     * @dev Mint new tokens and submit an update to the CommitChain.
+     * @param to The address to which the new tokens will be minted.
+     * @param value The amount of tokens to mint.
+     */
+    function mint(address to, uint256 value) public virtual onlyOwner {
+        _mint(to, value);
+        uint8 updateType = 1;
+        _submitTokenUpdate(value, updateType);
+    }
+
+    /**
+     * @dev Burn tokens and submit an update to the CommitChain.
+     * @param from The address from which the tokens will be burned.
+     * @param value The amount of tokens to burn.
+     */
+    function burn(address from, uint256 value) public virtual onlyOwner {
+        _burn(from, value);
+        uint8 updateType = 0;
+        _submitTokenUpdate(value, updateType);
+    }
+
+    /**
+     * @dev Submit a token balance update to the CommitChain.
+     * @param amount The amount of tokens to update.
+     * @param updateType The type of update (0 for burn, 1 for mint).
+     */
+    function submitTokenUpdate(uint256 amount, uint8 updateType) public virtual onlyOwner {
+        _submitTokenUpdate(amount, updateType);
+    }
+
+    /**
+     * @dev Internal function to submit a token balance update to the CommitChain. This function encodes a function call to the TokenRegistry contract.
+     * @param amount The amount of tokens to update.
+     * @param updateType The type of update (0 for burn, 1 for mint).
+     */
+    function _submitTokenUpdate(uint256 amount, uint8 updateType) internal {
+        _raylsSend(
+            endpoint.getCommitChainId(),
+            endpoint.getCommitChainAddress("TokenRegistry"),
+            abi.encodeWithSignature(
+                "updateTokenBalance(uint256,uint256,bytes32,uint8)",
+                endpoint.getChainId(),
+                amount,
+                resourceId,
+                updateType
+            )
+        );
+    }
+    /**
+     * @dev Returns the symbol of the token, usually a shorter version of the
+     * name.
+     * Overrided method to allow erc20 to be initializable
+     */
+
+    function symbol() public view override returns (string memory) {
+        return tokenSymbol;
+    }
+
+    function teleport(address to, uint256 value, uint256 chainId) public virtual returns (bool) {
+        _burn(msg.sender, value);
+
+        BridgedTransferMetadata memory transferMetadata = BridgedTransferMetadata({
+            assetType: RaylsBridgeableERC.ERC20,
+            id: 0,
+            from: msg.sender,
+            to: to,
+            amount: value
+        });
+
+        sendTeleport(
+            chainId,
+            abi.encodeWithSignature("receiveTeleport(address,uint256)", to, value),
+            bytes(""),
+            bytes(""),
+            bytes(""),
+            transferMetadata
+        );
+        return true;
+    }
+
+    function teleportFrom(address from, address to, uint256 value, uint256 chainId) public virtual returns (bool) {
+        address spender = _msgSender();
+        _spendAllowance(from, spender, value);
+        _burn(from, value);
+
+        BridgedTransferMetadata memory transferMetadata = BridgedTransferMetadata({
+            assetType: RaylsBridgeableERC.ERC20,
+            id: 0,
+            from: from,
+            to: to,
+            amount: value
+        });
+
+        sendTeleport(
+            chainId,
+            abi.encodeWithSignature("receiveTeleport(address,uint256)", to, value),
+            bytes(""),
+            bytes(""),
+            bytes(""),
+            transferMetadata
+        );
+
+        return true;
+    }
+
+    function teleportAtomic(address to, uint256 value, uint256 destinationChainId) public virtual returns (bool) {
+        _burn(msg.sender, value);
+
+        BridgedTransferMetadata memory transferMetadata = BridgedTransferMetadata({
+            assetType: RaylsBridgeableERC.ERC20,
+            id: 0,
+            from: msg.sender,
+            to: to,
+            amount: value
+        });
+
+        sendTeleport(
+            destinationChainId,
+            abi.encodeWithSignature("receiveTeleportAtomic(address,uint256)", to, value),
+            abi.encodeWithSignature("unlock(address,uint256)", to, value),
+            abi.encodeWithSignature("revertTeleportMint(address,uint256)", msg.sender, value),
+            abi.encodeWithSignature("revertTeleportBurn(address,uint256)", msg.sender, value),
+            transferMetadata
+        );
+        return true;
+    }
+
+    function teleportAtomicFrom(address from, address to, uint256 value, uint256 destinationChainId)
+        public
+        virtual
+        returns (bool)
+    {
+        address spender = _msgSender();
+        _spendAllowance(from, spender, value);
+        _burn(from, value);
+
+        BridgedTransferMetadata memory transferMetadata = BridgedTransferMetadata({
+            assetType: RaylsBridgeableERC.ERC20,
+            id: 0,
+            from: from,
+            to: to,
+            amount: value
+        });
+
+        sendTeleport(
+            destinationChainId,
+            abi.encodeWithSignature("receiveTeleportAtomic(address,uint256)", to, value),
+            abi.encodeWithSignature("unlock(address,uint256)", to, value),
+            abi.encodeWithSignature("revertTeleportMint(address,uint256)", from, value),
+            abi.encodeWithSignature("revertTeleportBurn(address,uint256)", from, value),
+            transferMetadata
+        );
+        return true;
+    }
+
+    function receiveTeleport(address to, uint256 value) public virtual receiveMethod {
+        _mint(to, value);
+    }
+
+    function receiveTeleportAtomic(address to, uint256 value) public virtual receiveMethod {
+        _mint(owner(), value);
+        if (to != owner()) {
+            _lock(to, value);
+        }
+    }
+
+    function revertTeleportMint(address to, uint256 value) public virtual receiveMethod {
+        _mint(to, value);
+    }
+
+    function revertTeleportBurn(address to, uint256 value) public virtual receiveMethod {
+        _burn(to, value);
+    }
+
+    function receiveResourceId(bytes32 _resourceId) public virtual receiveMethod onlyFromCommitChain {
+        resourceId = _resourceId;
+        _registerResourceId();
+    }
+
+    function submitTokenRegistration() public virtual {
+        _raylsSend(
+            endpoint.getCommitChainId(),
+            endpoint.getCommitChainAddress("TokenRegistry"),
+            abi.encodeWithSignature(
+                "addToken((string,string,uint256,uint256,bytes,bytes,bool,uint8))",
+                SharedObjects.TokenRegistrationData({
+                    name: name(),
+                    symbol: symbol(),
+                    totalSupply: totalSupply(),
+                    issuerChainId: endpoint.getChainId(),
+                    bytecode: address(this).code,
+                    initializerParams: _generateInitializerParams(),
+                    isFungible: true,
+                    ercStandard: SharedObjects.ErcStandard.ERC20
+                })
+            )
+        );
+    }
+
+    function _generateInitializerParams() internal view returns (bytes memory) {
+        return abi.encodeWithSignature("initialize(string,string,uint8)", tokenName, tokenSymbol, decimals());
+    }
+
+    function _commitBalance(address from) internal {
+        uint256 balance = balanceOf(from);
+        (uint256 x, uint256 y) = Curve.derivePubKey(balance);
+        _raylsSend(
+            endpoint.getCommitChainId(),
+            endpoint.getCommitChainAddress("BalanceCommitment"),
+            abi.encodeWithSignature(
+                "commitBalance(uint256,address,bytes32,uint256,uint256)",
+                endpoint.getChainId(),
+                address(this),
+                Utils.addressToBytes32(from),
+                x,
+                y
+            )
+        );
+    }
+    /**
+     * @notice Unlocks the locked funds and calls transfer
+     * @param to Address of a "to" account to unlock the funds to
+     * @param amount Amount of tokens to unlock
+     */
+
+    function unlock(address to, uint256 amount) external returns (bool) {
+        if (to != owner()) {
+            bool success = _unlock(to, amount);
+            require(success, "cannot unlock the assets");
+            _transfer(owner(), to, amount);
+            return true;
+        }
+        return true;
+    }
+
+    function _lock(address to, uint256 amount) internal {
+        require(amount > 0, "Amount must be greater than 0");
+        require(to != address(0));
+        lockedAmount[to] += amount;
+    }
+
+    function _unlock(address to, uint256 amount) internal returns (bool) {
+        require(to != address(0));
+
+        uint256 amountToUnlock = lockedAmount[to];
+        require(amount > 0 && amount <= amountToUnlock, "Not enough funds to unlock");
+
+        lockedAmount[to] -= amount;
+
+        return true;
+    }
+
+    function getLockedAmount(address account) public view returns (uint256) {
+        return lockedAmount[account];
+    }
+
+    function sendTeleport(
+        uint256 chainId,
+        bytes memory _payload,
+        bytes memory _lockDataPayload,
+        bytes memory _revertDataPayloadSender,
+        bytes memory _revertDataPayloadReceiver,
+        BridgedTransferMetadata memory transferMetadata
+    ) internal {
+        require(resourceId != bytes32(0), "Token not registered.");
+
+        _raylsSendToResourceId(
+            chainId,
+            resourceId,
+            _payload,
+            _lockDataPayload,
+            _revertDataPayloadSender,
+            _revertDataPayloadReceiver,
+            transferMetadata
+        );
+    }
+
+    function _update(address from, address to, uint256 value) internal override {
+        super._update(from, to, value); // calls oz implementation, if it works there's no revert
+        if (from != address(0)) {
+            _commitBalance(from);
+        }
+        if (to != address(0)) {
+            _commitBalance(to);
+        }
+    }
+}
+
+
+######
+
+RaylsErc1155Handler
+Definition
+In Rayls SDK, apart from what you can build using the base contract RaylsApp, we offer other contracts to complement and ease your implementations. Here, you will see the handler for Erc1155, which inherits from RaylsApp — to become integrated to Rayls — and also, of course, from Erc1155.
+
+Methods
+If you wish to explore the contract on your own, it can be found in the section below. Here we'll highlight only some of the main methods.
+
+Constructor
+Solidity
+
+abstract contract RaylsErc1155Handler is
+    RaylsApp,
+    ERC1155,
+    Initializable,
+    Ownable
+{
+    string private _uri;
+    string public name;
+    address balanceCommitmentsContract;
+    mapping(address => mapping(uint256 => uint256)) lockedAmount;
+    mapping(uint256 => bool) alreadySentDeployInstructions;
+  
+    /**
+     * @dev Constructor to initialize the RaylsCore with the provided endpoint and owner.
+     * @param _endpoint The address of the Rayls endpoint.
+     * @param _owner The address of the owner of the RaylsCore.
+     */
+    constructor(
+        string memory uri,
+        string memory _name,
+        address _endpoint,
+        address _owner
+    ) ERC1155(uri) RaylsApp(_endpoint) Ownable(_owner) {
+        _uri = uri;
+        name = _name;
+        _disableInitializers();
+    }
+  
+  // ...
+}
+As we can see, we have the standard uri to represent the ERC1155 in the constructor, a _name, the _endpoint for the RaylsApp and an address to set as the _owner
+
+initialize
+Solidity
+
+function initialize(
+    string memory uri,
+    string memory _name
+) public virtual initializer {
+    address _owner = _getOwnerAddressOnInitialize();
+    address _endpoint = _getEndpointAddressOnInitialize();
+    resourceId = _getResourceIdOnInitialize();
+    // ERC1155 initizalization
+    _uri = uri;
+    name = _name;
+    // RaylsApp Initialization
+    _transferOwnership(_owner);
+    endpoint = IRaylsEndpoint(_endpoint);
+}
+As this contract can be used by proxy contracts, we need to do the initializations in a standard methods, not on the constructor (otherwise the proxy contract state won't be updated properly).
+
+sendTeleport
+Solidity
+
+function sendTeleport(
+    uint256 chainId,
+    bytes memory _payload,
+    bytes memory _lockDataPayload,
+    bytes memory _revertDataPayloadSender,
+    bytes memory _revertDataPayloadReceiver,
+    BridgedTransferMetadata memory metadata
+) internal {
+    require(resourceId != bytes32(0), "Token not registered.");
+    
+  	_raylsSendToResourceId(
+      chainId,
+      resourceId,
+      _payload,
+      _lockDataPayload,
+      _revertDataPayloadSender,
+      _revertDataPayloadReceiver,
+      metadata
+    );
+}
+The base of every following teleport method: It basically proxies the request to the RaylsApp method _raylsSendToResourceId, which sends a payload (including possible atomic revert mechanisms) cross-chain.
+
+teleport
+Solidity
+
+function teleport(
+    address to,
+    uint256 id,
+    uint256 value,
+    uint256 chainId,
+    bytes memory data
+) public virtual returns (bool) {
+    _burn(msg.sender, id, value);
+
+    BridgedTransferMetadata memory metadata = BridgedTransferMetadata({
+      assetType: RaylsBridgeableERC.ERC1155,
+      id: id,
+      from: msg.sender,
+      to: to,
+      amount: value
+    });
+
+    sendTeleport(
+      chainId,
+      abi.encodeWithSignature(
+        "receiveTeleport(address,uint256,uint256,bytes)",
+        to,
+        id,
+        value,
+        data
+      ),
+      bytes(""),
+      abi.encodeWithSignature(
+        "revertTeleportMint(address,uint256,uint256,bytes)",
+        msg.sender,
+        id,
+        value,
+        data
+      ),
+      abi.encodeWithSignature(
+        "revertTeleportBurn(address,uint256,uint256)",
+        msg.sender,
+        id,
+        value
+      ),
+      metadata
+    );
+    return true;
+}
+A method to teleport (send cross-chain) an amount of the token. This is a vanilla teleport, which means there are no revert mechanisms, that is, it assumes the transaction will be a success.
+
+teleportAtomic
+Solidity
+
+function teleportAtomic(
+    address to,
+    uint256 id,
+    uint256 value,
+    uint256 chainId,
+    bytes memory data
+) public virtual returns (bool) {
+    _burn(msg.sender, id, value);
+
+    BridgedTransferMetadata memory metadata = BridgedTransferMetadata({
+      assetType: RaylsBridgeableERC.ERC1155,
+      id: id,
+      from: msg.sender,
+      to: to,
+      amount: value
+    });
+
+    sendTeleport(
+      chainId,
+      abi.encodeWithSignature("receiveTeleportAtomic(address,uint256,uint256,bytes)", to, id, value, data),
+      abi.encodeWithSignature("unlock(address,uint256,uint256,bytes)", to, id, value, data),
+      abi.encodeWithSignature("revertTeleportMint(address,uint256,uint256,bytes)", msg.sender, id, value, data),
+      abi.encodeWithSignature("revertTeleportBurn(address,uint256,uint256)", msg.sender, id, value),
+      metadata
+    );
+    return true;
+}
+A method to teleport (send cross-chain) an amount of the token. This is an atomic teleport, which means there are revert mechanisms, that is, if the transaction fails by some reason, it will be reverted.
+
+Contract
+Solidity
+
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+import {RaylsApp} from "../RaylsApp.sol";
+import {ERC1155} from "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "../interfaces/IRaylsEndpoint.sol";
+import "../RaylsMessage.sol";
+import "../libraries/Pedersen/Curve.sol";
+import "../libraries/SharedObjects.sol";
+import "../libraries/Utils.sol";
+
+abstract contract RaylsErc1155Handler is
+    RaylsApp,
+    ERC1155,
+    Initializable,
+    Ownable
+{
+    string private _uri;
+    string public name;
+    address balanceCommitmentsContract;
+    mapping(address => mapping(uint256 => uint256)) lockedAmount;
+    mapping(uint256 => bool) alreadySentDeployInstructions;
+    /**
+     * @dev Constructor to initialize the RaylsCore with the provided endpoint and owner.
+     * @param _endpoint The address of the Rayls endpoint.
+     * @param _owner The address of the owner of the RaylsCore.
+     */
+    constructor(
+        string memory uri,
+        string memory _name,
+        address _endpoint,
+        address _owner
+    ) ERC1155(uri) RaylsApp(_endpoint) Ownable(_owner) {
+        _uri = uri;
+        name = _name;
+        _disableInitializers();
+    }
+    function initialize(
+        string memory uri,
+        string memory _name
+    ) public virtual initializer {
+        address _owner = _getOwnerAddressOnInitialize();
+        address _endpoint = _getEndpointAddressOnInitialize();
+        resourceId = _getResourceIdOnInitialize();
+        // ERC1155 initizalization
+        _uri = uri;
+        name = _name;
+        // RaylsApp Initialization
+        _transferOwnership(_owner);
+        endpoint = IRaylsEndpoint(_endpoint);
+    }
+    function uri(
+        uint256 /* id */
+    ) public view virtual override returns (string memory) {
+        return _uri;
+    }
+    function _setURI(string memory newuri) internal virtual override {
+        _uri = newuri;
+    }
+    function teleport(
+        address to,
+        uint256 id,
+        uint256 value,
+        uint256 chainId,
+        bytes memory data
+    ) public virtual returns (bool) {
+        _burn(msg.sender, id, value);
+
+        BridgedTransferMetadata memory metadata = BridgedTransferMetadata({
+            assetType: RaylsBridgeableERC.ERC1155,
+            id: id,
+            from: msg.sender,
+            to: to,
+            amount: value
+        });
+
+        sendTeleport(
+            chainId,
+            abi.encodeWithSignature(
+                "receiveTeleport(address,uint256,uint256,bytes)",
+                to,
+                id,
+                value,
+                data
+            ),
+            bytes(""),
+            abi.encodeWithSignature(
+                "revertTeleportMint(address,uint256,uint256,bytes)",
+                msg.sender,
+                id,
+                value,
+                data
+            ),
+            abi.encodeWithSignature(
+                "revertTeleportBurn(address,uint256,uint256)",
+                msg.sender,
+                id,
+                value
+            ),
+            metadata
+        );
+        return true;
+    }
+    function teleportAtomic(
+        address to,
+        uint256 id,
+        uint256 value,
+        uint256 chainId,
+        bytes memory data
+    ) public virtual returns (bool) {
+        _burn(msg.sender, id, value);
+
+        BridgedTransferMetadata memory metadata = BridgedTransferMetadata({
+            assetType: RaylsBridgeableERC.ERC1155,
+            id: id,
+            from: msg.sender,
+            to: to,
+            amount: value
+        });
+
+        sendTeleport(
+            chainId,
+            abi.encodeWithSignature("receiveTeleportAtomic(address,uint256,uint256,bytes)", to, id, value, data),
+            abi.encodeWithSignature("unlock(address,uint256,uint256,bytes)", to, id, value, data),
+            abi.encodeWithSignature("revertTeleportMint(address,uint256,uint256,bytes)", msg.sender, id, value, data),
+            abi.encodeWithSignature("revertTeleportBurn(address,uint256,uint256)", msg.sender, id, value),
+            metadata
+        );
+        return true;
+    }
+    function receiveTeleport(
+        address to,
+        uint256 id,
+        uint256 value,
+        bytes memory data
+    ) public virtual {
+        _mint(to, id, value, data);
+    }
+    function receiveTeleportAtomic(
+        address to,
+        uint256 id,
+        uint256 value,
+        bytes memory data
+    ) public virtual {
+        _mint(owner(), id, value, data);
+        if (to != owner()) {
+            _lock(to, id, value);
+        }
+    }
+    function revertTeleportMint(
+        address to,
+        uint256 id,
+        uint256 value,
+        bytes memory data
+    ) public virtual receiveMethod {
+        _mint(to, id, value, data);
+    }
+    function revertTeleportBurn(
+        address to,
+        uint256 id,
+        uint256 value
+    ) public virtual receiveMethod {
+        _burn(to, id, value);
+    }
+    /**
+     * @notice Unlocks the locked funds and calls transfer
+     * @param to Address of a "to" account to unlock the funds to
+     * @param amount Amount of tokens to unlock
+     */
+    function unlock(
+        address to,
+        uint256 id,
+        uint256 amount,
+        bytes memory data
+    ) external returns (bool) {
+        bool success = _unlock(to, id, amount);
+        require(success, "cannot unlock the assets");
+        _safeTransferFrom(owner(), to, id, amount, data);
+        return true;
+    }
+    function _lock(address to, uint256 id, uint256 amount) internal {
+        require(amount > 0, "Amount must be greater than 0");
+        require(to != address(0));
+        lockedAmount[to][id] += amount;
+    }
+    function _unlock(
+        address to,
+        uint256 id,
+        uint256 amount
+    ) internal returns (bool) {
+        require(to != address(0));
+        uint256 amountToUnlock = lockedAmount[to][id];
+        require(
+            amount > 0 && amount <= amountToUnlock,
+            "Not enough funds to unlock"
+        );
+        lockedAmount[to][id] -= amount;
+        return true;
+    }
+    function receiveResourceId(
+        bytes32 _resourceId
+    ) public virtual receiveMethod onlyFromCommitChain {
+        resourceId = _resourceId;
+        _registerResourceId();
+    }
+    function submitTokenRegistration() public virtual {
+        _raylsSend(
+            endpoint.getCommitChainId(),
+            endpoint.getCommitChainAddress("TokenRegistry"),
+            abi.encodeWithSignature(
+                "addToken((string,string,uint256,uint256,bytes,bytes,bool,uint8))",
+                SharedObjects.TokenRegistrationData({
+                    name: name,
+                    symbol: name,
+                    totalSupply: 0,
+                    issuerChainId: endpoint.getChainId(),
+                    bytecode: address(this).code,
+                    initializerParams: _generateInitializerParams(),
+                    isFungible: false,
+                    ercStandard: SharedObjects.ErcStandard.ERC1155
+                })
+            )
+        );
+    }
+    function _generateInitializerParams() internal virtual view returns (bytes memory) {
+        return abi.encodeWithSignature("initialize(string,string)", _uri, name);
+    }
+    function getLockedAmount(
+        address account,
+        uint256 id
+    ) public view returns (uint256) {
+        return lockedAmount[account][id];
+    }
+    function sendTeleport(
+        uint256 chainId,
+        bytes memory _payload,
+        bytes memory _lockDataPayload,
+        bytes memory _revertDataPayloadSender,
+        bytes memory _revertDataPayloadReceiver,
+        BridgedTransferMetadata memory metadata
+    ) internal {
+        require(resourceId != bytes32(0), "Token not registered.");
+        _raylsSendToResourceId(
+            chainId,
+            resourceId,
+            _payload,
+            _lockDataPayload,
+            _revertDataPayloadSender,
+            _revertDataPayloadReceiver,
+            metadata
+        );
+    }
+}
+
+
+#######
+
+RaylsErc721Handler
+Definition
+In Rayls SDK, apart from what you can build using the base contract RaylsApp, we offer other contracts to complement and ease your implementations. Here, you will see the handler for Erc721, which inherits from RaylsApp — to become integrated to Rayls — and also, of course, from Erc721.
+
+Methods
+If you wish to explore the contract on your own, it can be found in the section below. Here we'll highlight only some of the main methods.
+
+Constructor
+Solidity
+
+abstract contract RaylsErc721Handler is RaylsApp, ERC721, Initializable, Ownable {
+    string private _uri;
+    string public _name;
+    string public _symbol;
+
+    address balanceCommitmentsContract;
+    mapping(address => mapping(uint256 => bool)) lockedTokens;
+    mapping(uint256 => bool) alreadySentDeployInstructions;
+
+    /**
+     * @dev Constructor to initialize the RaylsCore with the provided endpoint and owner.
+     * @param _endpoint The address of the Rayls endpoint.
+     * @param _owner The address of the owner of the RaylsCore.
+     */
+    constructor(string memory uri, string memory name_, string memory symbol_, address _endpoint, address _owner)
+        ERC721(name_, symbol_)
+        RaylsApp(_endpoint)
+        Ownable(_owner)
+    {
+        _name = name_;
+        _symbol = symbol_;
+        _uri = uri;
+        _disableInitializers();
+    }
+  
+    // ...
+}
+As we can see, we have _name, _symbol and uri to represent the ERC721 in the constructor, as well as the _endpoint for the RaylsApp and an address to set as the _owner.
+
+initialize
+Solidity
+
+function initialize(string memory uri, string memory name_, string memory symbol_) public virtual initializer {
+    address _owner = _getOwnerAddressOnInitialize();
+    address _endpoint = _getEndpointAddressOnInitialize();
+    resourceId = _getResourceIdOnInitialize();
+    // ERC721 initizalization
+    _name = name_;
+    _symbol = symbol_;
+    _uri = uri;
+    // RaylsApp Initialization
+    _transferOwnership(_owner);
+    endpoint = IRaylsEndpoint(_endpoint);
+}
+As this contract can be used by proxy contracts, we need to do the initializations in a standard methods, not on the constructor (otherwise the proxy contract state won't be updated properly).
+
+initialize
+Solidity
+
+function initialize(string memory uri, string memory name_, string memory symbol_) public virtual initializer {
+    address _owner = _getOwnerAddressOnInitialize();
+    address _endpoint = _getEndpointAddressOnInitialize();
+    resourceId = _getResourceIdOnInitialize();
+    // ERC721 initizalization
+    _name = name_;
+    _symbol = symbol_;
+    _uri = uri;
+    // RaylsApp Initialization
+    _transferOwnership(_owner);
+    endpoint = IRaylsEndpoint(_endpoint);
+}
+As this contract can be used by proxy contracts, we need to do the initializations in a standard methods, not on the constructor (otherwise the proxy contract state won't be updated properly).
+
+sendTeleport
+Solidity
+
+function sendTeleport(
+    uint256 chainId,
+    bytes memory _payload,
+    bytes memory _lockDataPayload,
+    bytes memory _revertDataPayloadSender,
+    bytes memory _revertDataPayloadReceiver,
+    BridgedTransferMetadata memory metadata
+    ) internal {
+  require(resourceId != bytes32(0), "Token not registered.");
+    _raylsSendToResourceId(
+      chainId,
+      resourceId,
+      _payload,
+      _lockDataPayload,
+      _revertDataPayloadSender,
+      _revertDataPayloadReceiver,
+      metadata
+    );
+}
+The base of every following teleport method: It basically proxies the request to the RaylsApp method _raylsSendToResourceId, which sends a payload (including possible atomic revert mechanisms) cross-chain.
+
+teleport
+Solidity
+
+function teleport(address to, uint256 id, uint256 chainId) public virtual returns (bool) {
+    _burn(id);
+
+    BridgedTransferMetadata memory metadata =
+    BridgedTransferMetadata({assetType: RaylsBridgeableERC.ERC721, id: id, from: msg.sender, to: to, amount: 0});
+
+    sendTeleport(
+      chainId,
+      abi.encodeWithSignature("receiveTeleport(address,uint256)", to, id),
+      bytes(""),
+      abi.encodeWithSignature("revertTeleportMint(address,uint256)", msg.sender, id),
+      abi.encodeWithSignature("revertTeleportBurn(address,uint256)", msg.sender, id),
+      metadata
+    );
+  
+    return true;
+}
+A method to teleport (send cross-chain) an amount of the token. This is a vanilla teleport, which means there are no revert mechanisms, that is, it assumes the transaction will be a success.
+
+teleportAtomic
+Solidity
+
+function teleportAtomic(address to, uint256 id, uint256 chainId) public virtual returns (bool) {
+    _burn(id);
+
+    BridgedTransferMetadata memory metadata =
+    BridgedTransferMetadata({assetType: RaylsBridgeableERC.ERC721, id: id, from: msg.sender, to: to, amount: 0});
+
+    sendTeleport(
+      chainId,
+      abi.encodeWithSignature("receiveTeleportAtomic(address,uint256)", to, id),
+      abi.encodeWithSignature("unlock(address,uint256)", to, id),
+      abi.encodeWithSignature("revertTeleportMint(address,uint256)", msg.sender, id),
+      abi.encodeWithSignature("revertTeleportBurn(address,uint256)", msg.sender, id),
+      metadata
+    );
+    return true;
+}
+A method to teleport (send cross-chain) an amount of the token. This is an atomic teleport, which means there are revert mechanisms, that is, if the transaction fails by some reason, it will be reverted.
+
+Contract
+Solidity
+
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+import {RaylsApp} from "../RaylsApp.sol";
+import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "../interfaces/IRaylsEndpoint.sol";
+import "../RaylsMessage.sol";
+import "../libraries/Pedersen/Curve.sol";
+import "../libraries/SharedObjects.sol";
+import "../libraries/Utils.sol";
+
+abstract contract RaylsErc721Handler is RaylsApp, ERC721, Initializable, Ownable {
+    string private _uri;
+    string public _name;
+    string public _symbol;
+
+    address balanceCommitmentsContract;
+    mapping(address => mapping(uint256 => bool)) lockedTokens;
+    mapping(uint256 => bool) alreadySentDeployInstructions;
+
+    /**
+     * @dev Constructor to initialize the RaylsCore with the provided endpoint and owner.
+     * @param _endpoint The address of the Rayls endpoint.
+     * @param _owner The address of the owner of the RaylsCore.
+     */
+    constructor(string memory uri, string memory name_, string memory symbol_, address _endpoint, address _owner)
+        ERC721(name_, symbol_)
+        RaylsApp(_endpoint)
+        Ownable(_owner)
+    {
+        _name = name_;
+        _symbol = symbol_;
+        _uri = uri;
+        _disableInitializers();
+    }
+
+    function initialize(string memory uri, string memory name_, string memory symbol_) public virtual initializer {
+        address _owner = _getOwnerAddressOnInitialize();
+        address _endpoint = _getEndpointAddressOnInitialize();
+        resourceId = _getResourceIdOnInitialize();
+        // ERC721 initizalization
+        _name = name_;
+        _symbol = symbol_;
+        _uri = uri;
+        // RaylsApp Initialization
+        _transferOwnership(_owner);
+        endpoint = IRaylsEndpoint(_endpoint);
+    }
+
+    function name() public view virtual override returns (string memory) {
+        return _name;
+    }
+
+    function symbol() public view virtual override returns (string memory) {
+        return _symbol;
+    }
+
+    function _baseURI() internal view virtual override returns (string memory) {
+        return _uri;
+    }
+
+    function teleport(address to, uint256 id, uint256 chainId) public virtual returns (bool) {
+        _burn(id);
+
+        BridgedTransferMetadata memory metadata =
+            BridgedTransferMetadata({assetType: RaylsBridgeableERC.ERC721, id: id, from: msg.sender, to: to, amount: 0});
+
+        sendTeleport(
+            chainId,
+            abi.encodeWithSignature("receiveTeleport(address,uint256)", to, id),
+            bytes(""),
+            abi.encodeWithSignature("revertTeleportMint(address,uint256)", msg.sender, id),
+            abi.encodeWithSignature("revertTeleportBurn(address,uint256)", msg.sender, id),
+            metadata
+        );
+        return true;
+    }
+
+    function teleportAtomic(address to, uint256 id, uint256 chainId) public virtual returns (bool) {
+        _burn(id);
+
+        BridgedTransferMetadata memory metadata =
+            BridgedTransferMetadata({assetType: RaylsBridgeableERC.ERC721, id: id, from: msg.sender, to: to, amount: 0});
+
+        sendTeleport(
+            chainId,
+            abi.encodeWithSignature("receiveTeleportAtomic(address,uint256)", to, id),
+            abi.encodeWithSignature("unlock(address,uint256)", to, id),
+            abi.encodeWithSignature("revertTeleportMint(address,uint256)", msg.sender, id),
+            abi.encodeWithSignature("revertTeleportBurn(address,uint256)", msg.sender, id),
+            metadata
+        );
+        return true;
+    }
+
+    function receiveTeleport(address to, uint256 id) public virtual {
+        _mint(to, id);
+    }
+
+    function receiveTeleportAtomic(address to, uint256 id) public virtual {
+        _mint(owner(), id);
+        if (to != owner()) {
+            _lock(to, id);
+        }
+    }
+
+    function revertTeleportMint(address to, uint256 id) public virtual receiveMethod {
+        _mint(to, id);
+    }
+
+    function revertTeleportBurn(uint256 id) public virtual receiveMethod {
+        _burn(id);
+    }
+
+    /**
+     * @notice Unlocks the locked funds and calls transfer
+     * @param to Address of a "to" account to unlock the funds to
+     * @param id Id of the token to unlock
+     */
+    function unlock(address to, uint256 id) external returns (bool) {
+        bool success = _unlock(to, id);
+        require(success, "cannot unlock the assets");
+        _safeTransfer(owner(), to, id);
+        return true;
+    }
+
+    function _lock(address to, uint256 id) internal {
+        require(to != address(0));
+        lockedTokens[to][id] = true;
+    }
+
+    function _unlock(address to, uint256 id) internal returns (bool) {
+        require(to != address(0));
+        bool isLocked = lockedTokens[to][id];
+        require(isLocked == true, "No funds to unlock");
+        lockedTokens[to][id] = false;
+        return true;
+    }
+
+    function receiveResourceId(bytes32 _resourceId) public virtual receiveMethod onlyFromCommitChain {
+        resourceId = _resourceId;
+        _registerResourceId();
+    }
+
+    function submitTokenRegistration() public virtual {
+        _raylsSend(
+            endpoint.getCommitChainId(),
+            endpoint.getCommitChainAddress("TokenRegistry"),
+            abi.encodeWithSignature(
+                "addToken((string,string,uint256,uint256,bytes,bytes,bool,uint8))",
+                SharedObjects.TokenRegistrationData({
+                    name: _name,
+                    symbol: _symbol,
+                    totalSupply: 0,
+                    issuerChainId: endpoint.getChainId(),
+                    bytecode: address(this).code,
+                    initializerParams: _generateInitializerParams(),
+                    isFungible: false,
+                    ercStandard: SharedObjects.ErcStandard.ERC721
+                })
+            )
+        );
+    }
+
+    function _generateInitializerParams() internal view virtual returns (bytes memory) {
+        return abi.encodeWithSignature("initialize(string,string,string)", _uri, _name, _symbol);
+    }
+
+    function isTokenLocked(address account, uint256 id) public view returns (bool) {
+        return lockedTokens[account][id];
+    }
+
+    function sendTeleport(
+        uint256 chainId,
+        bytes memory _payload,
+        bytes memory _lockDataPayload,
+        bytes memory _revertDataPayloadSender,
+        bytes memory _revertDataPayloadReceiver,
+        BridgedTransferMetadata memory metadata
+    ) internal {
+        require(resourceId != bytes32(0), "Token not registered.");
+        _raylsSendToResourceId(
+            chainId,
+            resourceId,
+            _payload,
+            _lockDataPayload,
+            _revertDataPayloadSender,
+            _revertDataPayloadReceiver,
+            metadata
+        );
+    }
+}
