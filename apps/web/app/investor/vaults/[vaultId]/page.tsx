@@ -10,7 +10,10 @@ import {
   Loader2,
   CheckCircle2,
   XCircle,
+  Users,
+  MapPin,
 } from "lucide-react";
+import Link from "next/link";
 import {
   AreaChart,
   Area,
@@ -37,7 +40,12 @@ import {
   CONTRACT_ADDRESSES,
   AGRO_VAULT_ABI,
   MOCK_STABLECOIN_ABI,
+  FARMER_REGISTRY_ABI,
 } from "@/app/lib/contracts";
+
+// Map on-chain enum values to display names
+const CROP_TYPES = ["Unknown", "Soy", "Corn", "Coffee", "Fruits", "Specialty", "Other"];
+const REGIONS = ["Unknown", "North", "Northeast", "Central", "Southeast", "South"];
 
 // Mock data for the chart
 const chartData = [
@@ -192,9 +200,9 @@ export default function VaultDetailPage() {
                 <span className="text-white font-mono">
                   {((totalAssets ?? 0n) as bigint) > 0n
                     ? `$${formatUnits((totalAssets ?? 0n) as bigint, 6)}`
-                    : vault.tvl.toLocaleString("pt-BR", {
+                    : vault.tvl.toLocaleString("en-US", {
                         style: "currency",
-                        currency: "BRL",
+                        currency: "USD",
                       })}
                 </span>
               </span>
@@ -296,53 +304,11 @@ export default function VaultDetailPage() {
             </div>
           </Card>
 
-          {/* Underlying Assets List */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-white">
-              Underlying Assets
-            </h3>
-            <Card className="bg-rayls-charcoal border-rayls-border overflow-hidden">
-              <div className="grid grid-cols-5 gap-4 p-4 text-xs font-semibold text-rayls-grey uppercase tracking-wider border-b border-rayls-border">
-                <div>Asset ID</div>
-                <div>Collateral Type</div>
-                <div>Maturity</div>
-                <div>Status</div>
-                <div className="text-right">Risk Grade</div>
-              </div>
-              <div className="divide-y divide-rayls-border">
-                {vaultNotes.length > 0 ? (
-                  vaultNotes.map((note) => (
-                    <div
-                      key={note.id}
-                      className="grid grid-cols-5 gap-4 p-4 text-sm items-center hover:bg-white/5 transition-colors"
-                    >
-                      <div className="font-mono text-rayls-lime truncate">
-                        {note.id}
-                      </div>
-                      <div>{note.collateralType}</div>
-                      <div>{note.maturityDate}</div>
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-rayls-lime shadow-[0_0_8px_#D9F94F]" />
-                        <span className="text-white">Performing</span>
-                      </div>
-                      <div className="text-right">
-                        <Badge
-                          variant="outline"
-                          className="border-rayls-lime text-rayls-lime bg-rayls-lime/10"
-                        >
-                          {note.riskGrade}
-                        </Badge>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="p-8 text-center text-rayls-grey">
-                    No assets currently in this vault.
-                  </div>
-                )}
-              </div>
-            </Card>
-          </div>
+          {/* Active Farmers Section */}
+          <FarmersInVault />
+
+          {/* Underlying Assets (Notes) */}
+          <UnderlyingAssets />
         </div>
 
         {/* Right Column (1/3): Deposit/Withdraw & Holdings */}
@@ -481,3 +447,227 @@ export default function VaultDetailPage() {
     </main>
   );
 }
+
+// Component: Farmers in Vault
+function FarmersInVault() {
+  // Get all note IDs from vault
+  const { data: noteIds } = useReadContract({
+    address: CONTRACT_ADDRESSES.AgroVault,
+    abi: AGRO_VAULT_ABI,
+    functionName: "getNoteIds",
+    args: [0n, 100n], // Get first 100 notes
+  });
+
+  // Extract unique farmer addresses from notes
+  const farmerAddresses = useMemo(() => {
+    if (!noteIds || (noteIds as bigint[]).length === 0) return [];
+    
+    const addresses = new Set<string>();
+    // We'll need to fetch each note to get farmer address
+    // For now, return empty and fetch in sub-component
+    return [];
+  }, [noteIds]);
+
+  const noteCount = noteIds ? (noteIds as bigint[]).length : 0;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <Users className="h-5 w-5 text-rayls-lime" />
+        <h3 className="text-lg font-semibold text-white">Active Borrowers</h3>
+        <Badge variant="outline" className="border-rayls-border text-rayls-grey text-xs">
+          {noteCount} loans
+        </Badge>
+      </div>
+      <Card className="bg-rayls-charcoal border-rayls-border overflow-hidden">
+        <div className="divide-y divide-rayls-border max-h-[400px] overflow-y-auto">
+          {noteIds && (noteIds as bigint[]).length > 0 ? (
+            (noteIds as bigint[]).slice(0, 10).map((noteId) => (
+              <FarmerRowFromNote key={noteId.toString()} noteId={noteId} />
+            ))
+          ) : (
+            <div className="p-8 text-center text-rayls-grey">
+              No active borrowers in this vault yet.
+            </div>
+          )}
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+// Sub-component: Fetch farmer info from a note
+function FarmerRowFromNote({ noteId }: { noteId: bigint }) {
+  const { data: noteData } = useReadContract({
+    address: CONTRACT_ADDRESSES.FarmerNote,
+    abi: [
+      {
+        inputs: [{ name: "noteId", type: "uint256" }],
+        name: "getNote",
+        outputs: [
+          {
+            components: [
+              { name: "farmer", type: "address" },
+              { name: "principal", type: "uint256" },
+              { name: "interestRateBps", type: "uint256" },
+              { name: "maturityTimestamp", type: "uint256" },
+              { name: "status", type: "uint8" },
+              { name: "vault", type: "address" },
+            ],
+            type: "tuple",
+          },
+        ],
+        stateMutability: "view",
+        type: "function",
+      },
+    ],
+    functionName: "getNote",
+    args: [noteId],
+  });
+
+  const farmerAddress = noteData ? (noteData as { farmer: string }).farmer : null;
+
+  const { data: farmerData } = useReadContract({
+    address: CONTRACT_ADDRESSES.FarmerRegistry,
+    abi: FARMER_REGISTRY_ABI,
+    functionName: "getFarmer",
+    args: farmerAddress ? [farmerAddress as `0x${string}`] : undefined,
+    query: { enabled: !!farmerAddress },
+  });
+
+  const { data: totalFunded } = useReadContract({
+    address: CONTRACT_ADDRESSES.AgroVault,
+    abi: AGRO_VAULT_ABI,
+    functionName: "getTotalFundedToFarmer",
+    args: farmerAddress ? [farmerAddress as `0x${string}`] : undefined,
+    query: { enabled: !!farmerAddress },
+  });
+
+  if (!noteData || !farmerData || !farmerAddress) return null;
+
+  const farmer = farmerData as { riskTier: number; cropType: number; region: number };
+  const principal = totalFunded ? Number(formatUnits(totalFunded as bigint, 6)) : 0;
+
+  return (
+    <Link href={`/farmer/${farmerAddress}`}>
+      <div className="grid grid-cols-4 gap-4 p-4 text-sm items-center hover:bg-white/5 transition-colors cursor-pointer">
+        <div>
+          <div className="font-mono text-xs text-rayls-grey">
+            {farmerAddress.slice(0, 6)}...{farmerAddress.slice(-4)}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <MapPin className="h-3 w-3 text-rayls-grey" />
+          <span className="text-white">{REGIONS[farmer.region]}</span>
+        </div>
+        <div className="font-mono text-white">${principal.toLocaleString()}</div>
+        <div className="text-right">
+          <Badge variant="outline" className="border-rayls-lime text-rayls-lime bg-rayls-lime/10 text-xs">
+            {CROP_TYPES[farmer.cropType]}
+          </Badge>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+// Component: Underlying Assets (Notes)
+function UnderlyingAssets() {
+  const { data: noteIds } = useReadContract({
+    address: CONTRACT_ADDRESSES.AgroVault,
+    abi: AGRO_VAULT_ABI,
+    functionName: "getNoteIds",
+    args: [0n, 20n],
+  });
+
+  return (
+    <div className="space-y-4">
+      <h3 className="text-lg font-semibold text-white">Loan Portfolio</h3>
+      <Card className="bg-rayls-charcoal border-rayls-border overflow-hidden">
+        <div className="grid grid-cols-4 gap-4 p-4 text-xs font-semibold text-rayls-grey uppercase tracking-wider border-b border-rayls-border">
+          <div>Note ID</div>
+          <div>Principal</div>
+          <div>Interest Rate</div>
+          <div className="text-right">Status</div>
+        </div>
+        <div className="divide-y divide-rayls-border">
+          {noteIds && (noteIds as bigint[]).length > 0 ? (
+            (noteIds as bigint[]).map((noteId) => (
+              <NoteRow key={noteId.toString()} noteId={noteId} />
+            ))
+          ) : (
+            <div className="p-8 text-center text-rayls-grey">
+              No loans in this vault yet.
+            </div>
+          )}
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+// Sub-component for individual note
+function NoteRow({ noteId }: { noteId: bigint }) {
+  const { data: noteData } = useReadContract({
+    address: CONTRACT_ADDRESSES.FarmerNote,
+    abi: [
+      {
+        inputs: [{ name: "noteId", type: "uint256" }],
+        name: "getNote",
+        outputs: [
+          {
+            components: [
+              { name: "farmer", type: "address" },
+              { name: "principal", type: "uint256" },
+              { name: "interestRateBps", type: "uint256" },
+              { name: "maturityTimestamp", type: "uint256" },
+              { name: "status", type: "uint8" },
+              { name: "vault", type: "address" },
+            ],
+            type: "tuple",
+          },
+        ],
+        stateMutability: "view",
+        type: "function",
+      },
+    ],
+    functionName: "getNote",
+    args: [noteId],
+  });
+
+  const { data: outstanding } = useReadContract({
+    address: CONTRACT_ADDRESSES.AgroVault,
+    abi: AGRO_VAULT_ABI,
+    functionName: "noteOutstandingPrincipal",
+    args: [noteId],
+  });
+
+  if (!noteData) return null;
+
+  const note = noteData as { principal: bigint; interestRateBps: bigint };
+  const principal = Number(formatUnits(note.principal, 6));
+  const rate = Number(note.interestRateBps) / 100;
+  const outstandingAmount = outstanding ? Number(formatUnits(outstanding as bigint, 6)) : 0;
+  const isRepaid = outstandingAmount === 0;
+
+  return (
+    <div className="grid grid-cols-4 gap-4 p-4 text-sm items-center hover:bg-white/5 transition-colors">
+      <div className="font-mono text-rayls-lime">#{noteId.toString()}</div>
+      <div className="font-mono">${principal.toLocaleString()}</div>
+      <div className="font-mono text-white">{rate}% APR</div>
+      <div className="text-right">
+        <Badge
+          variant="outline"
+          className={
+            isRepaid
+              ? "border-green-500 text-green-500 bg-green-500/10"
+              : "border-rayls-lime text-rayls-lime bg-rayls-lime/10"
+          }
+        >
+          {isRepaid ? "Repaid" : "Active"}
+        </Badge>
+      </div>
+    </div>
+  );
+}
+

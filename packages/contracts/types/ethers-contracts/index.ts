@@ -2,12 +2,14 @@
 /* tslint:disable */
 /* eslint-disable */
 export type { AgroVault } from './AgroVault.js';
+export type { CreditPassport } from './CreditPassport.js';
 export type { FarmerNote } from './FarmerNote.js';
 export type { FarmerRegistry } from './FarmerRegistry.js';
 export type { InvestorWhitelist } from './InvestorWhitelist.js';
 export type { MockStablecoin } from './MockStablecoin.js';
 export * as factories from './factories/index.js';
 export { AgroVault__factory } from './factories/AgroVault__factory.js';
+export { CreditPassport__factory } from './factories/CreditPassport__factory.js';
 export { FarmerNote__factory } from './factories/FarmerNote__factory.js';
 export { FarmerRegistry__factory } from './factories/FarmerRegistry__factory.js';
 export { InvestorWhitelist__factory } from './factories/InvestorWhitelist__factory.js';

@@ -12,6 +12,8 @@ import {
   AlertTriangle,
   Sprout,
   Banknote,
+  ChevronDown,
+  Loader2,
 } from "lucide-react";
 import {
   UnderwriteRequestSchema,
@@ -23,10 +25,13 @@ import {
 } from "@/app/lib/schemas";
 import { mockUnderwrite } from "@/app/lib/mock-services";
 import { useDemo } from "@/app/lib/demo-context";
+import { useAccount, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { CONTRACT_ADDRESSES, CREDIT_PASSPORT_ABI } from "@/app/lib/contracts";
 
 // ... schema imports ...
 
@@ -35,6 +40,24 @@ type UnderwriteFormState = {
   errors: Record<string, string>;
   submitting: boolean;
 };
+
+const demoFarmProfiles: Array<UnderwriteFormState["values"]> = [
+  {
+    documentId: "12.345.678/0001-90",
+    name: "Fazenda Primavera Agro LTDA",
+    coopMember: true,
+  },
+  {
+    documentId: "98.765.432/0001-10",
+    name: "Cooperativa Sul Café",
+    coopMember: true,
+  },
+  {
+    documentId: "45.678.910/0001-55",
+    name: "Agro Horizonte Grãos",
+    coopMember: false,
+  },
+];
 
 const emptyForm: UnderwriteFormState = {
   values: {
@@ -57,8 +80,8 @@ function parseForm(values: UnderwriteFormState["values"]): UnderwriteRequest {
     typeof value === "number"
       ? value
       : typeof value === "string" && value.trim().length > 0
-      ? Number(value)
-      : NaN;
+        ? Number(value)
+        : NaN;
 
   const payload: UnderwriteRequest = {
     name: values.name ?? "",
@@ -83,9 +106,51 @@ function parseForm(values: UnderwriteFormState["values"]): UnderwriteRequest {
 
 export default function UnderwritingPage() {
   const { addFarmer } = useDemo();
+  const { address, isConnected } = useAccount();
   const [form, setForm] = useState<UnderwriteFormState>(emptyForm);
   const [result, setResult] = useState<UnderwriteResponse | null>(null);
   const [registeredFarmer, setRegisteredFarmer] = useState<Farmer | null>(null);
+  const [passportMinted, setPassportMinted] = useState(false);
+
+  // Wagmi hooks for minting Credit Passport
+  const { writeContract: mintPassport, data: mintHash } = useWriteContract();
+  const { isLoading: isMintPending, isSuccess: isMintSuccess } = useWaitForTransactionReceipt({
+    hash: mintHash,
+  });
+  const [documentName, setDocumentName] = useState<string>("");
+
+  const handleAutofillDemo = () => {
+    const sample =
+      demoFarmProfiles[Math.floor(Math.random() * demoFarmProfiles.length)];
+
+    const randomRegion =
+      regions[Math.floor(Math.random() * regions.length)];
+    const randomCropType =
+      cropTypes[Math.floor(Math.random() * cropTypes.length)];
+
+    const randomHectares = Math.floor(80 + Math.random() * 920); // 80–1000 ha
+    const randomYield = parseFloat((2 + Math.random() * 3).toFixed(1)); // 2.0–5.0 t/ha
+    const randomAmount =
+      Math.round((200_000 + Math.random() * 800_000) / 10_000) * 10_000; // 200k–1M, rounded
+    const possibleTenors = [6, 9, 12, 18, 24, 36];
+    const randomTenor =
+      possibleTenors[Math.floor(Math.random() * possibleTenors.length)];
+
+    setForm((prev) => ({
+      ...prev,
+      values: {
+        ...prev.values,
+        ...sample,
+        region: randomRegion,
+        cropType: randomCropType,
+        hectares: randomHectares,
+        historicalYieldTonsPerHectare: randomYield,
+        requestedAmount: randomAmount,
+        tenorMonths: randomTenor,
+      },
+      errors: {},
+    }));
+  };
 
   const handleChange = (
     field: keyof UnderwriteFormState["values"],
@@ -184,32 +249,75 @@ export default function UnderwritingPage() {
     setRegisteredFarmer(farmer);
   };
 
+  const handleMintPassport = () => {
+    if (!result || !address) return;
+    const parsed = UnderwriteRequestSchema.safeParse(parseForm(form.values));
+    if (!parsed.success) return;
+
+    // Build metadata JSON
+    const metadata = {
+      name: parsed.data.name,
+      creditScore: 850, // Mock score
+      riskTier: result.riskTier,
+      riskBand: result.riskBand,
+      maxCreditLimit: result.maxCreditLimit,
+      region: parsed.data.region,
+      cropType: parsed.data.cropType,
+    };
+
+    const metadataJSON = JSON.stringify(metadata);
+    const metadataURI = `data:application/json;base64,${Buffer.from(metadataJSON).toString("base64")}`;
+
+    mintPassport({
+      address: CONTRACT_ADDRESSES.CreditPassport,
+      abi: CREDIT_PASSPORT_ABI,
+      functionName: "mintPassport",
+      args: [address, metadataURI],
+    });
+  };
+
+  // Update passport minted state on success
+  if (isMintSuccess && !passportMinted) {
+    setPassportMinted(true);
+  }
+
   return (
     <div className="flex min-h-screen bg-rayls-black text-white font-sans">
       {/* LEFT: Input Panel */}
       <div className="w-full lg:w-1/2 p-8 lg:p-12 border-r border-rayls-border overflow-y-auto">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold tracking-tight mb-2">
-            Origination Desk
-          </h1>
-          <p className="text-rayls-grey text-sm">
-            Enter farmer details to generate AI-driven credit risk thesis.
-          </p>
+        <div className="mb-8 flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight mb-2">
+              Origination Desk
+        </h1>
+            <p className="text-rayls-grey text-sm">
+              Enter farmer details to generate AI-driven credit risk thesis.
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleAutofillDemo}
+            className="border-rayls-border text-[11px] text-rayls-grey hover:text-white hover:border-rayls-lime/60"
+          >
+            Load demo farmer
+          </Button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-8">
           {/* Section: Identity */}
           <div className="space-y-4">
             <h2 className="text-sm font-semibold text-rayls-lime uppercase tracking-wider flex items-center gap-2">
-              <ShieldCheck className="h-4 w-4" /> Identity & Privacy
+              <ShieldCheck className="h-4 w-4" /> Legal Identity
             </h2>
             <div className="grid gap-4">
               <div>
                 <label className="block text-xs font-medium text-rayls-grey mb-1">
-                  CPF Hash (Privacy Preserved)
+                  CNPJ
                 </label>
                 <Input
-                  placeholder="0x..."
+                  placeholder="00.000.000/0000-00"
                   value={form.values.documentId ?? ""}
                   onChange={(e) => handleChange("documentId", e.target.value)}
                   className="font-mono"
@@ -222,7 +330,7 @@ export default function UnderwritingPage() {
               </div>
               <div>
                 <label className="block text-xs font-medium text-rayls-grey mb-1">
-                  Farmer Legal Name (Off-chain)
+                  Legal name
                 </label>
                 <Input
                   value={form.values.name ?? ""}
@@ -234,8 +342,27 @@ export default function UnderwritingPage() {
                   </p>
                 )}
               </div>
+              <div>
+                <label className="block text-xs font-medium text-rayls-grey mb-1">
+                  Supporting documents
+                </label>
+                <Input
+                  type="file"
+                  accept="application/pdf,image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    setDocumentName(file ? file.name : "");
+                  }}
+                  className="cursor-pointer file:mr-3 file:rounded-md file:border-0 file:bg-rayls-dark file:px-3 file:py-1 file:text-xs file:text-rayls-grey hover:file:bg-rayls-hover"
+                />
+                <div className="mt-1 text-[11px] text-rayls-grey">
+                  {documentName
+                    ? `Attached: ${documentName}`
+                    : "Optional: upload financial statements, invoices or contracts (stored off-chain)."}
+                </div>
+              </div>
             </div>
-          </div>
+              </div>
 
           {/* Section: Crop & Land */}
           <div className="space-y-4">
@@ -247,35 +374,41 @@ export default function UnderwritingPage() {
                 <label className="block text-xs font-medium text-rayls-grey mb-1">
                   Region
                 </label>
+                <div className="relative">
                 <select
-                  className="flex h-10 w-full rounded-md border border-rayls-border bg-rayls-input px-3 py-2 text-sm text-white focus:ring-2 focus:ring-rayls-lime outline-none"
+                    className="flex h-10 w-full appearance-none rounded-md border border-rayls-border bg-rayls-input px-3 pr-8 py-2 text-sm text-white focus:ring-2 focus:ring-rayls-lime outline-none"
                   value={form.values.region ?? ""}
-                  onChange={(e) => handleChange("region", e.target.value)}
+                    onChange={(e) => handleChange("region", e.target.value)}
                 >
-                  <option value="">Select...</option>
-                  {regions.map((r) => (
-                    <option key={r} value={r}>
-                      {r}
+                    <option value="">Select...</option>
+                    {regions.map((r) => (
+                      <option key={r} value={r}>
+                        {r}
                     </option>
                   ))}
                 </select>
+                  <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-rayls-grey" />
+                </div>
               </div>
               <div>
                 <label className="block text-xs font-medium text-rayls-grey mb-1">
                   Crop Type
                 </label>
+                <div className="relative">
                 <select
-                  className="flex h-10 w-full rounded-md border border-rayls-border bg-rayls-input px-3 py-2 text-sm text-white focus:ring-2 focus:ring-rayls-lime outline-none"
+                    className="flex h-10 w-full appearance-none rounded-md border border-rayls-border bg-rayls-input px-3 pr-8 py-2 text-sm text-white focus:ring-2 focus:ring-rayls-lime outline-none"
                   value={form.values.cropType ?? ""}
-                  onChange={(e) => handleChange("cropType", e.target.value)}
+                    onChange={(e) => handleChange("cropType", e.target.value)}
                 >
-                  <option value="">Select...</option>
-                  {cropTypes.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
+                    <option value="">Select...</option>
+                    {cropTypes.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
                     </option>
                   ))}
                 </select>
+                  <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-rayls-grey" />
+                </div>
               </div>
               <div>
                 <label className="block text-xs font-medium text-rayls-grey mb-1">
@@ -304,7 +437,7 @@ export default function UnderwritingPage() {
                 />
               </div>
             </div>
-          </div>
+              </div>
 
           {/* Section: Financial Request */}
           <div className="space-y-4">
@@ -314,7 +447,7 @@ export default function UnderwritingPage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-medium text-rayls-grey mb-1">
-                  Amount (BRL)
+                  Amount (USD)
                 </label>
                 <Input
                   type="number"
@@ -453,21 +586,21 @@ export default function UnderwritingPage() {
                       <div className="flex flex-col items-end">
                         <span className="text-xs text-rayls-grey uppercase">
                           Risk Tier
-                        </span>
+                  </span>
                         <span className="text-xl font-bold text-rayls-lime">
                           {result.riskTier} - {result.riskBand}
-                        </span>
+                  </span>
                       </div>
                       <div className="flex flex-col items-end">
                         <span className="text-xs text-rayls-grey uppercase">
                           Max Limit
-                        </span>
+                  </span>
                         <span className="text-lg font-mono text-white">
                           R$ {result.maxCreditLimit.toLocaleString("pt-BR")}
-                        </span>
+                  </span>
                       </div>
                     </div>
-                  </div>
+                </div>
 
                   {/* AI Thesis */}
                   <div>
@@ -480,33 +613,68 @@ export default function UnderwritingPage() {
                   </div>
 
                   {/* Actions */}
-                  <div className="pt-4">
-                    <Button
-                      onClick={handleRegisterFarmer}
-                      disabled={!!registeredFarmer}
-                      className="w-full bg-white text-black hover:bg-gray-200 font-bold"
-                    >
-                      {registeredFarmer ? (
-                        <>
-                          <Check className="mr-2 h-4 w-4" /> Authenticated on
-                          Chain
-                        </>
-                      ) : (
-                        "Approve & Register on Rayls"
-                      )}
-                    </Button>
+                  <div className="pt-4 space-y-3">
+                    {!isConnected ? (
+                      <div className="text-center">
+                        <p className="text-xs text-rayls-grey mb-3">
+                          Connect wallet to mint Credit Passport
+                        </p>
+                        <ConnectButton />
+                      </div>
+                    ) : (
+                      <>
+                        {/* Mint Credit Passport Button */}
+                        <Button
+                  type="button"
+                          disabled={passportMinted || isMintPending}
+                          onClick={handleMintPassport}
+                          className="w-full bg-rayls-purple text-white hover:bg-rayls-purple/90 font-semibold text-sm"
+                        >
+                          {isMintPending ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Minting Passport...
+                            </>
+                          ) : passportMinted ? (
+                            <>
+                              <Check className="mr-2 h-4 w-4" /> 
+                              Passport Minted (SBT)
+                            </>
+                          ) : (
+                            "Mint Credit Passport (SBT)"
+                          )}
+                        </Button>
+
+                        {passportMinted && mintHash && (
+                          <div className="text-center space-y-1">
+                            <p className="text-[10px] text-rayls-lime">
+                              Soulbound Token Minted
+                            </p>
+                            <a
+                              href={`https://devnet-explorer.rayls.com/tx/${mintHash}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[10px] text-rayls-purple hover:text-rayls-purple/80 underline"
+                            >
+                              View Transaction on Explorer ↗
+                            </a>
+                          </div>
+                        )}
+                      </>
+                    )}
+
                     {registeredFarmer && (
-                      <p className="text-center text-[10px] text-rayls-lime mt-2 animate-pulse">
+                      <p className="text-center text-[10px] text-rayls-lime mt-1 animate-pulse">
                         Transaction Confirmed: {registeredFarmer.id}
-                      </p>
+                  </p>
                     )}
                   </div>
-                </div>
+              </div>
               </Card>
             </motion.div>
           )}
         </AnimatePresence>
       </div>
-    </div>
+        </div>
   );
 }

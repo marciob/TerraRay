@@ -1,0 +1,40 @@
+{
+  "name": "Fazenda Esperança",
+  "description": "Verified agricultural producer in Central with focus on Corn production.",
+  "creditScore": 750,
+  "riskTier": 2,
+  "riskBand": "BB–B",
+  "maxCreditLimit": 420000,
+  "region": "Central",
+  "cropType": "Corn",
+  "totalFunded": 280000,
+  "farmerAddress": "0x366362e4e3e2B786dC45b0eC565b7134A129FD9f",
+  "attributes": [
+    {
+      "trait_type": "Risk Tier",
+      "value": "Tier 2"
+    },
+    {
+      "trait_type": "Risk Band",
+      "value": "BB–B"
+    },
+    {
+      "trait_type": "Credit Score",
+      "display_type": "number",
+      "value": 750
+    },
+    {
+      "trait_type": "Crop Type",
+      "value": "Corn"
+    },
+    {
+      "trait_type": "Region",
+      "value": "Central"
+    },
+    {
+      "trait_type": "Total Funded",
+      "display_type": "number",
+      "value": 280000
+    }
+  ]
+}

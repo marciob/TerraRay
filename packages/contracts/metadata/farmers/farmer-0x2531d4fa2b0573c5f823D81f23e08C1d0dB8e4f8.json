@@ -1,0 +1,40 @@
+{
+  "name": "Agro Cerrado",
+  "description": "Verified agricultural producer in Central with focus on Corn production.",
+  "creditScore": 750,
+  "riskTier": 2,
+  "riskBand": "BB–B",
+  "maxCreditLimit": 500000,
+  "region": "Central",
+  "cropType": "Corn",
+  "totalFunded": 0,
+  "farmerAddress": "0x2531d4fa2b0573c5f823D81f23e08C1d0dB8e4f8",
+  "attributes": [
+    {
+      "trait_type": "Risk Tier",
+      "value": "Tier 2"
+    },
+    {
+      "trait_type": "Risk Band",
+      "value": "BB–B"
+    },
+    {
+      "trait_type": "Credit Score",
+      "display_type": "number",
+      "value": 750
+    },
+    {
+      "trait_type": "Crop Type",
+      "value": "Corn"
+    },
+    {
+      "trait_type": "Region",
+      "value": "Central"
+    },
+    {
+      "trait_type": "Total Funded",
+      "display_type": "number",
+      "value": 0
+    }
+  ]
+}

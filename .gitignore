@@ -1,5 +1,20 @@
-# Created by https://www.toptal.com/developers/gitignore/api/node
-# Edit at https://www.toptal.com/developers/gitignore?templates=node
+
+# Semaphore identities (IMPORTANT: Contains private keys!)
+packages/contracts/identities.json
+packages/contracts/showcase-identity.json
+packages/contracts/frontend-import.js
+
+# Deployment addresses
+deployments/
+
+# Created by https://www.toptal.com/developers/gitignore/api/circuitpython,node
+# Edit at https://www.toptal.com/developers/gitignore?templates=circuitpython,node
+
+### CircuitPython ###
+.Trashes
+.metadata_never_index
+.fseventsd/
+boot_out.txt
 
 ### Node ###
 # Logs
@@ -141,4 +156,4 @@ dist
 # SvelteKit build / generate output
 .svelte-kit
 
-# End of https://www.toptal.com/developers/gitignore/api/node
+# End of https://www.toptal.com/developers/gitignore/api/circuitpython,node

@@ -13,17 +13,25 @@ export declare namespace AgroTypes {
     }
 
   export interface FarmerRegistryInterface extends Interface {
-    getFunction(nameOrSignature: "getFarmer" | "owner" | "registerOrUpdateFarmer" | "renounceOwnership" | "transferOwnership"): FunctionFragment;
+    getFunction(nameOrSignature: "approvedFarmerCount" | "getFarmer" | "getFarmerAt" | "getFarmerCount" | "getFarmers" | "owner" | "registerOrUpdateFarmer" | "renounceOwnership" | "transferOwnership"): FunctionFragment;
 
     getEvent(nameOrSignatureOrTopic: "FarmerRegistered" | "FarmerUpdated" | "OwnershipTransferred"): EventFragment;
 
-    encodeFunctionData(functionFragment: 'getFarmer', values: [AddressLike]): string;
+    encodeFunctionData(functionFragment: 'approvedFarmerCount', values?: undefined): string;
+encodeFunctionData(functionFragment: 'getFarmer', values: [AddressLike]): string;
+encodeFunctionData(functionFragment: 'getFarmerAt', values: [BigNumberish]): string;
+encodeFunctionData(functionFragment: 'getFarmerCount', values?: undefined): string;
+encodeFunctionData(functionFragment: 'getFarmers', values: [BigNumberish, BigNumberish]): string;
 encodeFunctionData(functionFragment: 'owner', values?: undefined): string;
 encodeFunctionData(functionFragment: 'registerOrUpdateFarmer', values: [AddressLike, boolean, BigNumberish, BigNumberish, BigNumberish, string]): string;
 encodeFunctionData(functionFragment: 'renounceOwnership', values?: undefined): string;
 encodeFunctionData(functionFragment: 'transferOwnership', values: [AddressLike]): string;
 
-    decodeFunctionResult(functionFragment: 'getFarmer', data: BytesLike): Result;
+    decodeFunctionResult(functionFragment: 'approvedFarmerCount', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'getFarmer', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'getFarmerAt', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'getFarmerCount', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'getFarmers', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'owner', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'registerOrUpdateFarmer', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'renounceOwnership', data: BytesLike): Result;
@@ -101,9 +109,41 @@ decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Re
 
     
     
+    approvedFarmerCount: TypedContractMethod<
+      [],
+      [bigint],
+      'view'
+    >
+    
+
+    
     getFarmer: TypedContractMethod<
       [farmer: AddressLike, ],
       [AgroTypes.FarmerDataStructOutput],
+      'view'
+    >
+    
+
+    
+    getFarmerAt: TypedContractMethod<
+      [index: BigNumberish, ],
+      [string],
+      'view'
+    >
+    
+
+    
+    getFarmerCount: TypedContractMethod<
+      [],
+      [bigint],
+      'view'
+    >
+    
+
+    
+    getFarmers: TypedContractMethod<
+      [offset: BigNumberish, limit: BigNumberish, ],
+      [string[]],
       'view'
     >
     
@@ -143,9 +183,29 @@ decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Re
 
     getFunction<T extends ContractMethod = ContractMethod>(key: string | FunctionFragment): T;
 
-    getFunction(nameOrSignature: 'getFarmer'): TypedContractMethod<
+    getFunction(nameOrSignature: 'approvedFarmerCount'): TypedContractMethod<
+      [],
+      [bigint],
+      'view'
+    >;
+getFunction(nameOrSignature: 'getFarmer'): TypedContractMethod<
       [farmer: AddressLike, ],
       [AgroTypes.FarmerDataStructOutput],
+      'view'
+    >;
+getFunction(nameOrSignature: 'getFarmerAt'): TypedContractMethod<
+      [index: BigNumberish, ],
+      [string],
+      'view'
+    >;
+getFunction(nameOrSignature: 'getFarmerCount'): TypedContractMethod<
+      [],
+      [bigint],
+      'view'
+    >;
+getFunction(nameOrSignature: 'getFarmers'): TypedContractMethod<
+      [offset: BigNumberish, limit: BigNumberish, ],
+      [string[]],
       'view'
     >;
 getFunction(nameOrSignature: 'owner'): TypedContractMethod<

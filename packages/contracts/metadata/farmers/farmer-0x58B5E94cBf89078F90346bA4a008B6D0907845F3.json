@@ -1,0 +1,40 @@
+{
+  "name": "Cooperativa Sul",
+  "description": "Verified agricultural producer in Central with focus on Soy production.",
+  "creditScore": 850,
+  "riskTier": 1,
+  "riskBand": "A–BBB",
+  "maxCreditLimit": 500000,
+  "region": "Central",
+  "cropType": "Soy",
+  "totalFunded": 0,
+  "farmerAddress": "0x58B5E94cBf89078F90346bA4a008B6D0907845F3",
+  "attributes": [
+    {
+      "trait_type": "Risk Tier",
+      "value": "Tier 1"
+    },
+    {
+      "trait_type": "Risk Band",
+      "value": "A–BBB"
+    },
+    {
+      "trait_type": "Credit Score",
+      "display_type": "number",
+      "value": 850
+    },
+    {
+      "trait_type": "Crop Type",
+      "value": "Soy"
+    },
+    {
+      "trait_type": "Region",
+      "value": "Central"
+    },
+    {
+      "trait_type": "Total Funded",
+      "display_type": "number",
+      "value": 0
+    }
+  ]
+}

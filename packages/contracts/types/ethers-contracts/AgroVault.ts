@@ -6,7 +6,7 @@ import type { TypedContractEvent, TypedDeferredTopicFilter, TypedEventLog, Typed
   
 
   export interface AgroVaultInterface extends Interface {
-    getFunction(nameOrSignature: "allowance" | "anyCropTypeAllowed" | "approve" | "asset" | "balanceOf" | "convertToAssets" | "convertToShares" | "decimals" | "defaultNote" | "deposit" | "farmerNote" | "farmerRegistry" | "fundNote" | "investorWhitelist" | "isAllowedCropType" | "maxDeposit" | "maxMint" | "maxRedeem" | "maxWithdraw" | "mint" | "name" | "noteOutstandingPrincipal" | "owner" | "previewDeposit" | "previewMint" | "previewRedeem" | "previewWithdraw" | "recordRepayment" | "redeem" | "renounceOwnership" | "riskTierMax" | "riskTierMin" | "symbol" | "totalAssets" | "totalOutstandingPrincipal" | "totalSupply" | "transfer" | "transferFrom" | "transferOwnership" | "withdraw"): FunctionFragment;
+    getFunction(nameOrSignature: "allowance" | "anyCropTypeAllowed" | "approve" | "asset" | "balanceOf" | "convertToAssets" | "convertToShares" | "decimals" | "defaultNote" | "deposit" | "farmerNote" | "farmerRegistry" | "fundNote" | "getFarmerNoteIds" | "getNoteCount" | "getNoteIdAt" | "getNoteIds" | "getTotalFundedToFarmer" | "investorWhitelist" | "isAllowedCropType" | "maxDeposit" | "maxMint" | "maxRedeem" | "maxWithdraw" | "mint" | "name" | "noteOutstandingPrincipal" | "owner" | "previewDeposit" | "previewMint" | "previewRedeem" | "previewWithdraw" | "recordRepayment" | "redeem" | "renounceOwnership" | "riskTierMax" | "riskTierMin" | "symbol" | "totalAssets" | "totalOutstandingPrincipal" | "totalSupply" | "transfer" | "transferFrom" | "transferOwnership" | "withdraw"): FunctionFragment;
 
     getEvent(nameOrSignatureOrTopic: "Approval" | "Deposit" | "NoteDefaulted" | "NoteFunded" | "NoteRepaymentRecorded" | "OwnershipTransferred" | "Transfer" | "Withdraw"): EventFragment;
 
@@ -23,6 +23,11 @@ encodeFunctionData(functionFragment: 'deposit', values: [BigNumberish, AddressLi
 encodeFunctionData(functionFragment: 'farmerNote', values?: undefined): string;
 encodeFunctionData(functionFragment: 'farmerRegistry', values?: undefined): string;
 encodeFunctionData(functionFragment: 'fundNote', values: [AddressLike, BigNumberish, BigNumberish, BigNumberish, AddressLike]): string;
+encodeFunctionData(functionFragment: 'getFarmerNoteIds', values: [AddressLike]): string;
+encodeFunctionData(functionFragment: 'getNoteCount', values?: undefined): string;
+encodeFunctionData(functionFragment: 'getNoteIdAt', values: [BigNumberish]): string;
+encodeFunctionData(functionFragment: 'getNoteIds', values: [BigNumberish, BigNumberish]): string;
+encodeFunctionData(functionFragment: 'getTotalFundedToFarmer', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'investorWhitelist', values?: undefined): string;
 encodeFunctionData(functionFragment: 'isAllowedCropType', values: [BigNumberish]): string;
 encodeFunctionData(functionFragment: 'maxDeposit', values: [AddressLike]): string;
@@ -64,6 +69,11 @@ decodeFunctionResult(functionFragment: 'deposit', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'farmerNote', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'farmerRegistry', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'fundNote', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'getFarmerNoteIds', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'getNoteCount', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'getNoteIdAt', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'getNoteIds', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'getTotalFundedToFarmer', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'investorWhitelist', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'isAllowedCropType', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'maxDeposit', data: BytesLike): Result;
@@ -324,6 +334,46 @@ decodeFunctionResult(functionFragment: 'withdraw', data: BytesLike): Result;
       [farmer: AddressLike, principal: BigNumberish, interestRateBps: BigNumberish, maturityTimestamp: BigNumberish, recipient: AddressLike, ],
       [bigint],
       'nonpayable'
+    >
+    
+
+    
+    getFarmerNoteIds: TypedContractMethod<
+      [farmer: AddressLike, ],
+      [bigint[]],
+      'view'
+    >
+    
+
+    
+    getNoteCount: TypedContractMethod<
+      [],
+      [bigint],
+      'view'
+    >
+    
+
+    
+    getNoteIdAt: TypedContractMethod<
+      [index: BigNumberish, ],
+      [bigint],
+      'view'
+    >
+    
+
+    
+    getNoteIds: TypedContractMethod<
+      [offset: BigNumberish, limit: BigNumberish, ],
+      [bigint[]],
+      'view'
+    >
+    
+
+    
+    getTotalFundedToFarmer: TypedContractMethod<
+      [farmer: AddressLike, ],
+      [bigint],
+      'view'
     >
     
 
@@ -610,6 +660,31 @@ getFunction(nameOrSignature: 'fundNote'): TypedContractMethod<
       [farmer: AddressLike, principal: BigNumberish, interestRateBps: BigNumberish, maturityTimestamp: BigNumberish, recipient: AddressLike, ],
       [bigint],
       'nonpayable'
+    >;
+getFunction(nameOrSignature: 'getFarmerNoteIds'): TypedContractMethod<
+      [farmer: AddressLike, ],
+      [bigint[]],
+      'view'
+    >;
+getFunction(nameOrSignature: 'getNoteCount'): TypedContractMethod<
+      [],
+      [bigint],
+      'view'
+    >;
+getFunction(nameOrSignature: 'getNoteIdAt'): TypedContractMethod<
+      [index: BigNumberish, ],
+      [bigint],
+      'view'
+    >;
+getFunction(nameOrSignature: 'getNoteIds'): TypedContractMethod<
+      [offset: BigNumberish, limit: BigNumberish, ],
+      [bigint[]],
+      'view'
+    >;
+getFunction(nameOrSignature: 'getTotalFundedToFarmer'): TypedContractMethod<
+      [farmer: AddressLike, ],
+      [bigint],
+      'view'
     >;
 getFunction(nameOrSignature: 'investorWhitelist'): TypedContractMethod<
       [],

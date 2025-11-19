@@ -1,0 +1,40 @@
+{
+  "name": "Fazenda Aurora",
+  "description": "Verified agricultural producer in South with focus on Corn production.",
+  "creditScore": 750,
+  "riskTier": 2,
+  "riskBand": "BB–B",
+  "maxCreditLimit": 500000,
+  "region": "South",
+  "cropType": "Corn",
+  "totalFunded": 0,
+  "farmerAddress": "0x4cf6D7C5112FF629ba8179266202063643a4C372",
+  "attributes": [
+    {
+      "trait_type": "Risk Tier",
+      "value": "Tier 2"
+    },
+    {
+      "trait_type": "Risk Band",
+      "value": "BB–B"
+    },
+    {
+      "trait_type": "Credit Score",
+      "display_type": "number",
+      "value": 750
+    },
+    {
+      "trait_type": "Crop Type",
+      "value": "Corn"
+    },
+    {
+      "trait_type": "Region",
+      "value": "South"
+    },
+    {
+      "trait_type": "Total Funded",
+      "display_type": "number",
+      "value": 0
+    }
+  ]
+}

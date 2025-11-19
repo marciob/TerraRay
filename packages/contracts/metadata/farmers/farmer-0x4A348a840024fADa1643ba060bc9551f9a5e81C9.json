@@ -1,0 +1,40 @@
+{
+  "name": "Cooperativa Centro",
+  "description": "Verified agricultural producer in Northeast with focus on Corn production.",
+  "creditScore": 650,
+  "riskTier": 3,
+  "riskBand": "B–CCC",
+  "maxCreditLimit": 500000,
+  "region": "Northeast",
+  "cropType": "Corn",
+  "totalFunded": 0,
+  "farmerAddress": "0x4A348a840024fADa1643ba060bc9551f9a5e81C9",
+  "attributes": [
+    {
+      "trait_type": "Risk Tier",
+      "value": "Tier 3"
+    },
+    {
+      "trait_type": "Risk Band",
+      "value": "B–CCC"
+    },
+    {
+      "trait_type": "Credit Score",
+      "display_type": "number",
+      "value": 650
+    },
+    {
+      "trait_type": "Crop Type",
+      "value": "Corn"
+    },
+    {
+      "trait_type": "Region",
+      "value": "Northeast"
+    },
+    {
+      "trait_type": "Total Funded",
+      "display_type": "number",
+      "value": 0
+    }
+  ]
+}

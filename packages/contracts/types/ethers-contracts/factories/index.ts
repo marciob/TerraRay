@@ -2,6 +2,7 @@
 /* tslint:disable */
 /* eslint-disable */
 export { AgroVault__factory } from './AgroVault__factory.js';
+export { CreditPassport__factory } from './CreditPassport__factory.js';
 export { FarmerNote__factory } from './FarmerNote__factory.js';
 export { FarmerRegistry__factory } from './FarmerRegistry__factory.js';
 export { InvestorWhitelist__factory } from './InvestorWhitelist__factory.js';

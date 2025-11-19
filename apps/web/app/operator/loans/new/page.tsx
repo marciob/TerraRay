@@ -95,7 +95,7 @@ export default function NewLoanPage() {
 
     if (selectedFarmer && parsed.success) {
       if (parsed.data.principal > selectedFarmer.maxCreditLimit) {
-        errors.principal = `Principal exceeds farmer max credit limit of BRL ${selectedFarmer.maxCreditLimit.toLocaleString(
+        errors.principal = `Principal exceeds farmer max credit limit of USD ${selectedFarmer.maxCreditLimit.toLocaleString(
           "en-US",
         )}`;
       }
@@ -186,7 +186,7 @@ export default function NewLoanPage() {
                     {farmer.name} · Tier {farmer.riskTier} · Max{" "}
                     {farmer.maxCreditLimit.toLocaleString("en-US", {
                       style: "currency",
-                      currency: "BRL",
+                      currency: "USD",
                       maximumFractionDigits: 0,
                     })}
                   </option>
@@ -227,7 +227,7 @@ export default function NewLoanPage() {
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300">
-                  Principal (BRL)
+                  Principal (USD)
                 </label>
                 <input
                   type="number"
@@ -248,7 +248,7 @@ export default function NewLoanPage() {
                     Max for this farmer:{" "}
                     {selectedFarmer.maxCreditLimit.toLocaleString("en-US", {
                       style: "currency",
-                      currency: "BRL",
+                      currency: "USD",
                       maximumFractionDigits: 0,
                     })}
                   </p>
@@ -324,7 +324,7 @@ export default function NewLoanPage() {
                   </span>{" "}
                   {createdNote.principal.toLocaleString("en-US", {
                     style: "currency",
-                    currency: "BRL",
+                    currency: "USD",
                     maximumFractionDigits: 0,
                   })}
                 </p>
@@ -346,7 +346,7 @@ export default function NewLoanPage() {
                   </span>{" "}
                   {createdNote.outstanding.toLocaleString("en-US", {
                     style: "currency",
-                    currency: "BRL",
+                    currency: "USD",
                     maximumFractionDigits: 0,
                   })}
                 </p>

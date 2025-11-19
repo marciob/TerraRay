@@ -65,7 +65,15 @@ async function main() {
   const vaultAddress = await vault.getAddress();
   console.log("AgroVault deployed to:", vaultAddress);
 
-  // 6. Configuration
+  // 6. Deploy CreditPassport
+  console.log("Deploying CreditPassport...");
+  const CreditPassport = await ethers.getContractFactory("CreditPassport");
+  const passport = await CreditPassport.deploy(deployer.address);
+  await passport.waitForDeployment();
+  const passportAddress = await passport.getAddress();
+  console.log("CreditPassport deployed to:", passportAddress);
+
+  // 7. Configuration
   console.log("Configuring contracts...");
   // Allow vault to mint notes
   await note.setVault(vaultAddress, true);
@@ -82,6 +90,7 @@ async function main() {
     FarmerRegistry: registryAddress,
     FarmerNote: noteAddress,
     AgroVault: vaultAddress,
+    CreditPassport: passportAddress,
   });
 }
 

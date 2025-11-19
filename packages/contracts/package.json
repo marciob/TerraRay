@@ -11,7 +11,12 @@
     "flow:happy:local": "hardhat run onchain-flows/happy-path.ts --network hardhat",
     "flow:default:local": "hardhat run onchain-flows/default-writeoff.ts --network hardhat",
     "flow:happy:rayls": "hardhat run onchain-flows/happy-path.ts --network rayls",
-    "flow:default:rayls": "hardhat run onchain-flows/default-writeoff.ts --network rayls"
+    "flow:default:rayls": "hardhat run onchain-flows/default-writeoff.ts --network rayls",
+    "semaphore:create-group": "hardhat run scripts/create-auth-group.ts --network rayls",
+    "semaphore:add-members": "hardhat run scripts/add-members.ts --network rayls",
+    "semaphore:add-member": "hardhat run scripts/add-single-member.ts --network rayls",
+    "showcase:add-user": "hardhat run scripts/quick-add-showcase-user.ts --network rayls",
+    "showcase:generate-local": "ts-node scripts/generate-showcase-identity-local.ts"
   },
   "keywords": [],
   "author": "",
@@ -26,6 +31,9 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "@openzeppelin/contracts": "^5.1.0"
+    "@openzeppelin/contracts": "^5.1.0",
+    "@semaphore-protocol/contracts": "^4.0.3",
+    "@semaphore-protocol/identity": "^4.0.3",
+    "hardhat-deploy": "^0.12.4"
   }
 }

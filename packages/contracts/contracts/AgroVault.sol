@@ -28,6 +28,11 @@ contract AgroVault is ERC4626, Ownable, ReentrancyGuard {
     mapping(uint256 => uint256) public noteOutstandingPrincipal;
     uint256 public totalOutstandingPrincipal;
 
+    // Enumeration support
+    uint256[] private _noteIds;
+    mapping(address => uint256[]) private _farmerToNoteIds;
+    mapping(uint256 => uint256) private _noteIdIndex; // 1-based index (0 = not funded)
+
     event NoteFunded(
         uint256 indexed noteId,
         address indexed farmer,
@@ -165,6 +170,11 @@ contract AgroVault is ERC4626, Ownable, ReentrancyGuard {
         noteOutstandingPrincipal[noteId] = principal;
         totalOutstandingPrincipal += principal;
 
+        // Add to enumeration
+        _noteIds.push(noteId);
+        _noteIdIndex[noteId] = _noteIds.length; // 1-based
+        _farmerToNoteIds[farmer].push(noteId);
+
         emit NoteFunded(
             noteId,
             farmer,
@@ -226,5 +236,62 @@ contract AgroVault is ERC4626, Ownable, ReentrancyGuard {
     /// @dev Decimals offset to prevent inflation attacks (as per docs/contracts/erc4626.txt).
     function _decimalsOffset() internal view virtual override returns (uint8) {
         return 9;
+    }
+
+    /// @notice Get total number of notes funded by this vault.
+    function getNoteCount() external view returns (uint256) {
+        return _noteIds.length;
+    }
+
+    /// @notice Get a paginated list of note IDs funded by this vault.
+    /// @param offset Starting index (0-based).
+    /// @param limit Maximum number of results to return.
+    function getNoteIds(
+        uint256 offset,
+        uint256 limit
+    ) external view returns (uint256[] memory) {
+        uint256 total = _noteIds.length;
+        if (offset >= total) {
+            return new uint256[](0);
+        }
+
+        uint256 end = offset + limit;
+        if (end > total) {
+            end = total;
+        }
+
+        uint256 resultLength = end - offset;
+        uint256[] memory result = new uint256[](resultLength);
+
+        for (uint256 i = 0; i < resultLength; i++) {
+            result[i] = _noteIds[offset + i];
+        }
+
+        return result;
+    }
+
+    /// @notice Get all note IDs for a specific farmer funded by this vault.
+    function getFarmerNoteIds(address farmer) external view returns (uint256[] memory) {
+        return _farmerToNoteIds[farmer];
+    }
+
+    /// @notice Get total amount funded to a farmer (current outstanding + repaid).
+    /// @dev Sums all principals from farmer's notes.
+    function getTotalFundedToFarmer(address farmer) external view returns (uint256) {
+        uint256[] memory noteIds = _farmerToNoteIds[farmer];
+        uint256 total = 0;
+
+        for (uint256 i = 0; i < noteIds.length; i++) {
+            AgroTypes.NoteData memory noteData = farmerNote.getNote(noteIds[i]);
+            total += noteData.principal;
+        }
+
+        return total;
+    }
+
+    /// @notice Get note ID by index.
+    function getNoteIdAt(uint256 index) external view returns (uint256) {
+        require(index < _noteIds.length, "AgroVault: index out of bounds");
+        return _noteIds[index];
     }
 }

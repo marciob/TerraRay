@@ -1,0 +1,40 @@
+{
+  "name": "Sítio Harmonia",
+  "description": "Verified agricultural producer in South with focus on Soy production.",
+  "creditScore": 750,
+  "riskTier": 2,
+  "riskBand": "BB–B",
+  "maxCreditLimit": 500000,
+  "region": "South",
+  "cropType": "Soy",
+  "totalFunded": 0,
+  "farmerAddress": "0xE8a688c3AfF7BD98A5C5093f3E8E82e45e2e2A9d",
+  "attributes": [
+    {
+      "trait_type": "Risk Tier",
+      "value": "Tier 2"
+    },
+    {
+      "trait_type": "Risk Band",
+      "value": "BB–B"
+    },
+    {
+      "trait_type": "Credit Score",
+      "display_type": "number",
+      "value": 750
+    },
+    {
+      "trait_type": "Crop Type",
+      "value": "Soy"
+    },
+    {
+      "trait_type": "Region",
+      "value": "South"
+    },
+    {
+      "trait_type": "Total Funded",
+      "display_type": "number",
+      "value": 0
+    }
+  ]
+}

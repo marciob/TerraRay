@@ -1,0 +1,40 @@
+{
+  "name": "Fazenda Primavera",
+  "description": "Verified agricultural producer in Central with focus on Soy production.",
+  "creditScore": 750,
+  "riskTier": 2,
+  "riskBand": "BB–B",
+  "maxCreditLimit": 750,
+  "region": "Central",
+  "cropType": "Soy",
+  "totalFunded": 500,
+  "farmerAddress": "0x1bf7E71bAb46Be2E89C36e9A726675F3757C71DB",
+  "attributes": [
+    {
+      "trait_type": "Risk Tier",
+      "value": "Tier 2"
+    },
+    {
+      "trait_type": "Risk Band",
+      "value": "BB–B"
+    },
+    {
+      "trait_type": "Credit Score",
+      "display_type": "number",
+      "value": 750
+    },
+    {
+      "trait_type": "Crop Type",
+      "value": "Soy"
+    },
+    {
+      "trait_type": "Region",
+      "value": "Central"
+    },
+    {
+      "trait_type": "Total Funded",
+      "display_type": "number",
+      "value": 500
+    }
+  ]
+}

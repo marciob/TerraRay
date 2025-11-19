@@ -106,7 +106,7 @@ export default function RepaymentsPage() {
 
     if (parsed.success && note) {
       if (parsed.data.amount > note.outstanding) {
-        errors.amount = `Repayment exceeds outstanding of BRL ${note.outstanding.toLocaleString(
+        errors.amount = `Repayment exceeds outstanding of USD ${note.outstanding.toLocaleString(
           "en-US",
         )}`;
       }
@@ -172,7 +172,7 @@ export default function RepaymentsPage() {
                       {vault?.name ?? "Vault"} · Outst.{" "}
                       {note.outstanding.toLocaleString("en-US", {
                         style: "currency",
-                        currency: "BRL",
+                        currency: "USD",
                         maximumFractionDigits: 0,
                       })}
                     </option>
@@ -188,7 +188,7 @@ export default function RepaymentsPage() {
 
             <div>
               <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300">
-                Repayment amount (BRL)
+                Repayment amount (USD)
               </label>
               <input
                 type="number"

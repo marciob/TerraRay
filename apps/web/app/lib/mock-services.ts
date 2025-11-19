@@ -82,7 +82,7 @@ export async function mockUnderwrite(
 
   const explanation = [
     `Rayls scored this farmer as tier ${riskTier} in band ${riskBand}.`,
-    `Requested BRL ${payload.requestedAmount.toLocaleString("en-US")} at ${payload.tenorMonths} months.`,
+    `Requested USD ${payload.requestedAmount.toLocaleString("en-US")} at ${payload.tenorMonths} months.`,
     payload.coopMember
       ? "Coop membership and historical yield support a higher credit limit."
       : "Absence of coop backing slightly tightens the credit box.",

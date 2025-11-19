@@ -1,0 +1,40 @@
+{
+  "name": "Sítio Verde",
+  "description": "Verified agricultural producer in Southeast with focus on Soy production.",
+  "creditScore": 650,
+  "riskTier": 3,
+  "riskBand": "B–CCC",
+  "maxCreditLimit": 500000,
+  "region": "Southeast",
+  "cropType": "Soy",
+  "totalFunded": 0,
+  "farmerAddress": "0x451A0567D32068602d7Eec9915CB87fB1E3d12bc",
+  "attributes": [
+    {
+      "trait_type": "Risk Tier",
+      "value": "Tier 3"
+    },
+    {
+      "trait_type": "Risk Band",
+      "value": "B–CCC"
+    },
+    {
+      "trait_type": "Credit Score",
+      "display_type": "number",
+      "value": 650
+    },
+    {
+      "trait_type": "Crop Type",
+      "value": "Soy"
+    },
+    {
+      "trait_type": "Region",
+      "value": "Southeast"
+    },
+    {
+      "trait_type": "Total Funded",
+      "display_type": "number",
+      "value": 0
+    }
+  ]
+}

@@ -104,7 +104,7 @@ function performAiAnalysis(payload: UnderwriteRequest): UnderwriteResponse {
 
   const explanation = [
     `Rayls scored this farmer as tier ${riskTier} in band ${riskBand}.`,
-    `Requested BRL ${payload.requestedAmount.toLocaleString("en-US")} at ${
+    `Requested USD ${payload.requestedAmount.toLocaleString("en-US")} at ${
       payload.tenorMonths
     } months.`,
     payload.coopMember

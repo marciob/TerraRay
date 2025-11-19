@@ -1,0 +1,40 @@
+{
+  "name": "Agro Terra",
+  "description": "Verified agricultural producer in Northeast with focus on Corn production.",
+  "creditScore": 650,
+  "riskTier": 3,
+  "riskBand": "B–CCC",
+  "maxCreditLimit": 500000,
+  "region": "Northeast",
+  "cropType": "Corn",
+  "totalFunded": 0,
+  "farmerAddress": "0x44d8494B1C7b143Db35fed9c069b68c80D6cc7D4",
+  "attributes": [
+    {
+      "trait_type": "Risk Tier",
+      "value": "Tier 3"
+    },
+    {
+      "trait_type": "Risk Band",
+      "value": "B–CCC"
+    },
+    {
+      "trait_type": "Credit Score",
+      "display_type": "number",
+      "value": 650
+    },
+    {
+      "trait_type": "Crop Type",
+      "value": "Corn"
+    },
+    {
+      "trait_type": "Region",
+      "value": "Northeast"
+    },
+    {
+      "trait_type": "Total Funded",
+      "display_type": "number",
+      "value": 0
+    }
+  ]
+}
