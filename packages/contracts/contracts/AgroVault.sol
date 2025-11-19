@@ -55,11 +55,23 @@ contract AgroVault is ERC4626, Ownable, ReentrancyGuard {
         string memory symbol_,
         address initialOwner
     ) ERC20(name_, symbol_) ERC4626(asset_) Ownable(initialOwner) {
-        require(address(investorWhitelist_) != address(0), "AgroVault: whitelist zero");
-        require(address(farmerRegistry_) != address(0), "AgroVault: registry zero");
+        require(
+            address(investorWhitelist_) != address(0),
+            "AgroVault: whitelist zero"
+        );
+        require(
+            address(farmerRegistry_) != address(0),
+            "AgroVault: registry zero"
+        );
         require(address(farmerNote_) != address(0), "AgroVault: note zero");
-        require(riskTierMin_ >= 1 && riskTierMin_ <= 5, "AgroVault: bad min tier");
-        require(riskTierMax_ >= riskTierMin_ && riskTierMax_ <= 5, "AgroVault: bad max tier");
+        require(
+            riskTierMin_ >= 1 && riskTierMin_ <= 5,
+            "AgroVault: bad min tier"
+        );
+        require(
+            riskTierMax_ >= riskTierMin_ && riskTierMax_ <= 5,
+            "AgroVault: bad max tier"
+        );
 
         investorWhitelist = investorWhitelist_;
         farmerRegistry = farmerRegistry_;
@@ -140,7 +152,13 @@ contract AgroVault is ERC4626, Ownable, ReentrancyGuard {
         assetToken.transfer(recipient, principal);
 
         // Mint note to the vault itself.
-        noteId = farmerNote.mintNote(address(this), farmer, principal, interestRateBps, maturityTimestamp);
+        noteId = farmerNote.mintNote(
+            address(this),
+            farmer,
+            principal,
+            interestRateBps,
+            maturityTimestamp
+        );
 
         noteOutstandingPrincipal[noteId] = principal;
         totalOutstandingPrincipal += principal;
@@ -168,7 +186,9 @@ contract AgroVault is ERC4626, Ownable, ReentrancyGuard {
 
         IERC20(asset()).transferFrom(msg.sender, address(this), amount);
 
-        uint256 principalReduction = amount > outstanding ? outstanding : amount;
+        uint256 principalReduction = amount > outstanding
+            ? outstanding
+            : amount;
         uint256 newOutstanding = outstanding - principalReduction;
         noteOutstandingPrincipal[noteId] = newOutstanding;
         totalOutstandingPrincipal -= principalReduction;
@@ -182,8 +202,13 @@ contract AgroVault is ERC4626, Ownable, ReentrancyGuard {
 
     /// @inheritdoc ERC4626
     function totalAssets() public view override returns (uint256) {
-        return IERC20(asset()).balanceOf(address(this)) + totalOutstandingPrincipal;
+        return
+            IERC20(asset()).balanceOf(address(this)) +
+            totalOutstandingPrincipal;
+    }
+
+    /// @dev Decimals offset to prevent inflation attacks (as per docs/contracts/erc4626.txt).
+    function _decimalsOffset() internal view virtual override returns (uint8) {
+        return 9;
     }
 }
-
-
