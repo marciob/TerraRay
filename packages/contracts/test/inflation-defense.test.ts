@@ -13,7 +13,9 @@ describe("AgroVault Inflation Defense", function () {
     await stable.waitForDeployment();
 
     // Deploy dependencies
-    const InvestorWhitelist = await ethers.getContractFactory("InvestorWhitelist");
+    const InvestorWhitelist = await ethers.getContractFactory(
+      "InvestorWhitelist"
+    );
     const whitelist = await InvestorWhitelist.deploy(deployer.address);
     await whitelist.waitForDeployment();
 
@@ -27,7 +29,7 @@ describe("AgroVault Inflation Defense", function () {
 
     // Deploy AgroVault
     const AgroVault = await ethers.getContractFactory("AgroVault");
-    const allowedCropTypes = [1]; 
+    const allowedCropTypes = [1];
     const vault = await AgroVault.deploy(
       await stable.getAddress(),
       await whitelist.getAddress(),
@@ -51,17 +53,16 @@ describe("AgroVault Inflation Defense", function () {
     const expectedShares = ethers.parseUnits("1", 15); // 6 + 9 = 15
 
     const shares = await vault.previewDeposit(oneAsset);
-    
+
     expect(shares).to.equal(expectedShares);
-    
+
     // Also check directly by depositing
     await stable.mint(deployer.address, oneAsset);
     await stable.approve(await vault.getAddress(), oneAsset);
-    
+
     await vault.deposit(oneAsset, deployer.address);
     const balance = await vault.balanceOf(deployer.address);
-    
+
     expect(balance).to.equal(expectedShares);
   });
 });
-

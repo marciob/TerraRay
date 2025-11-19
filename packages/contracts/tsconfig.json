@@ -6,7 +6,7 @@
     "esModuleInterop": true,
     "moduleResolution": "Node16",
     "resolveJsonModule": true,
-    "types": ["node", "hardhat"]
+    "types": ["node", "hardhat", "mocha"]
   },
   "include": ["hardhat.config.ts", "scripts", "deploy", "test", "typechain-types"]
 }
