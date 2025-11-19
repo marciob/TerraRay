@@ -23,13 +23,13 @@ export function Header() {
 
         <nav className="hidden md:flex items-center gap-6">
           <Link 
-            href="/operator/farmers/new"
+            href="/"
             className={cn(
               "text-sm font-medium transition-colors hover:text-rayls-lime",
-              pathname.startsWith("/operator") ? "text-rayls-lime" : "text-rayls-grey"
+              pathname === "/" ? "text-rayls-lime" : "text-rayls-grey"
             )}
           >
-            Origination Desk
+            Dashboard
           </Link>
           <Link 
             href="/investor/vaults"

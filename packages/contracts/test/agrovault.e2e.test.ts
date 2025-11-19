@@ -1,39 +1,45 @@
 import { expect } from "chai";
-import { network } from "hardhat";
+import hre from "hardhat";
+import {
+  AgroVault__factory,
+  FarmerNote__factory,
+  FarmerRegistry__factory,
+  InvestorWhitelist__factory,
+  MockStablecoin__factory,
+} from "../types/ethers-contracts/index.js";
 
-const { ethers } = await network.connect();
+const { network, ethers } = hre as any;
+await network.connect();
 
 describe("AgroVault happy path", function () {
   async function setup() {
     const [deployer, investor, farmer] = await ethers.getSigners();
 
     // Deploy mock stablecoin (like USDC with 6 decimals)
-    const MockStablecoin = await ethers.getContractFactory("MockStablecoin");
-    const stable = await MockStablecoin.deploy("Mock USD", "mUSD", 6);
+    const stableFactory = new MockStablecoin__factory(deployer);
+    const stable = await stableFactory.deploy("Mock USD", "mUSD", 6);
     await stable.waitForDeployment();
 
     const decimals = await stable.decimals();
     const oneUnit = ethers.parseUnits("1", decimals);
 
     // Deploy core contracts
-    const InvestorWhitelist = await ethers.getContractFactory(
-      "InvestorWhitelist"
-    );
-    const whitelist = await InvestorWhitelist.deploy(deployer.address);
+    const whitelistFactory = new InvestorWhitelist__factory(deployer);
+    const whitelist = await whitelistFactory.deploy(deployer.address);
     await whitelist.waitForDeployment();
 
-    const FarmerRegistry = await ethers.getContractFactory("FarmerRegistry");
-    const registry = await FarmerRegistry.deploy(deployer.address);
+    const registryFactory = new FarmerRegistry__factory(deployer);
+    const registry = await registryFactory.deploy(deployer.address);
     await registry.waitForDeployment();
 
-    const FarmerNote = await ethers.getContractFactory("FarmerNote");
-    const note = await FarmerNote.deploy(deployer.address);
+    const noteFactory = new FarmerNote__factory(deployer);
+    const note = await noteFactory.deploy(deployer.address);
     await note.waitForDeployment();
 
     // Risk tiers 1–3, Soy & Corn prime vault
-    const AgroVault = await ethers.getContractFactory("AgroVault");
+    const vaultFactory = new AgroVault__factory(deployer);
     const allowedCropTypes = [1, 2]; // SOY, CORN (see AgroTypes.CropType)
-    const vault = await AgroVault.deploy(
+    const vault = await vaultFactory.deploy(
       await stable.getAddress(),
       await whitelist.getAddress(),
       await registry.getAddress(),
@@ -73,17 +79,20 @@ describe("AgroVault happy path", function () {
         stable,
         vault,
         oneUnit,
-        note
+      note,
     };
   }
 
   it("registers farmer, deposits, funds note and records repayment", async function () {
-    const { deployer, investor, farmer, stable, vault, oneUnit } = await setup();
+    const { deployer, investor, farmer, stable, vault, oneUnit } =
+      await setup();
 
     // Mint stablecoins to investor and approve vault
     const depositAmount = oneUnit * 1_000n;
     await stable.mint(investor.address, depositAmount);
-    await stable.connect(investor).approve(await vault.getAddress(), depositAmount);
+    await stable
+      .connect(investor)
+      .approve(await vault.getAddress(), depositAmount);
 
     // Deposit into vault
     await vault.connect(investor).deposit(depositAmount, investor.address);
@@ -125,9 +134,7 @@ describe("AgroVault happy path", function () {
       .connect(farmer)
       .approve(await vault.getAddress(), repaymentAmount);
 
-    await vault
-      .connect(farmer)
-      .recordRepayment(noteId!, repaymentAmount);
+    await vault.connect(farmer).recordRepayment(noteId!, repaymentAmount);
 
     const totalAssetsAfter = await vault.totalAssets();
     expect(totalAssetsAfter > totalAssetsBefore).to.equal(true);
@@ -137,12 +144,15 @@ describe("AgroVault happy path", function () {
   });
 
   it("handles loan default (write-off) correctly", async function () {
-    const { deployer, investor, farmer, stable, vault, oneUnit } = await setup();
+    const { deployer, investor, farmer, stable, vault, oneUnit } =
+      await setup();
 
     // 2. Investor deposits funds (1000 units)
     const depositAmount = oneUnit * 1_000n;
     await stable.mint(investor.address, depositAmount);
-    await stable.connect(investor).approve(await vault.getAddress(), depositAmount);
+    await stable
+      .connect(investor)
+      .approve(await vault.getAddress(), depositAmount);
     await vault.connect(investor).deposit(depositAmount, investor.address);
 
     // 3. Vault funds a note for the farmer (500 units)
@@ -150,13 +160,9 @@ describe("AgroVault happy path", function () {
     const rateBps = 1_200; // 12% APR
     const maturity = Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60;
 
-    const txFund = await vault.connect(deployer).fundNote(
-      farmer.address,
-      principal,
-      rateBps,
-      maturity,
-      farmer.address
-    );
+    const txFund = await vault
+      .connect(deployer)
+      .fundNote(farmer.address, principal, rateBps, maturity, farmer.address);
     const receiptFund = await txFund.wait();
     let noteId: bigint | undefined;
     if (receiptFund && receiptFund.logs) {

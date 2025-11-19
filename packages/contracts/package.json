@@ -7,7 +7,11 @@
   "scripts": {
     "compile": "hardhat compile",
     "test": "hardhat test",
-    "deploy:local": "hardhat run deploy/00_deploy_placeholder.ts --network hardhat"
+    "deploy:local": "hardhat run deploy/00_deploy_placeholder.ts --network hardhat",
+    "flow:happy:local": "hardhat run onchain-flows/happy-path.ts --network hardhat",
+    "flow:default:local": "hardhat run onchain-flows/default-writeoff.ts --network hardhat",
+    "flow:happy:rayls": "hardhat run onchain-flows/happy-path.ts --network rayls",
+    "flow:default:rayls": "hardhat run onchain-flows/default-writeoff.ts --network rayls"
   },
   "keywords": [],
   "author": "",

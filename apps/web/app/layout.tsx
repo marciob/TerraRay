@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
@@ -33,8 +34,11 @@ export default function RootLayout({
           <div className="flex flex-col min-h-screen">
             <Header />
             {children}
-            <footer className="py-4 text-center text-[10px] text-rayls-grey border-t border-rayls-border mt-auto">
-              Settlement via <span className="text-rayls-lime">Rayls</span> Public Chain. PII secured off-chain via Rayls Private subnet.
+            <footer className="py-4 px-8 text-center text-[10px] text-rayls-grey border-t border-rayls-border mt-auto flex justify-between items-center bg-rayls-charcoal/30">
+              <span>Settlement via <span className="text-rayls-lime">Rayls</span> Public Chain. PII secured off-chain via Rayls Private subnet.</span>
+              <Link href="/operator/farmers/new" className="hover:text-white transition-colors opacity-50 hover:opacity-100">
+                Operator Access
+              </Link>
             </footer>
           </div>
         </Providers>

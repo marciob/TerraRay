@@ -1,111 +1,87 @@
-//app/page.tsx
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
-import { ArrowRight, TrendingUp } from "lucide-react";
+import { ArrowUpRight, TrendingUp, Users, Wallet, Sprout } from "lucide-react";
 import { BrazilMap } from "@/components/dashboard/BrazilMap";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 
 export default function LandingPage() {
-  const [view, setView] = useState<"origination" | "capital">("origination");
-
   return (
     <main className="flex flex-1 flex-col bg-rayls-black text-white overflow-hidden relative">
-      {/* Top Stats Bar - Added margin-top to avoid overlap with fixed header */}
-      <div className="z-10 flex flex-col md:flex-row items-center justify-end border-b border-rayls-border bg-rayls-charcoal/50 p-4 backdrop-blur-md">
-        <div className="flex gap-8">
-          <div className="flex flex-col items-end">
-            <span className="text-[10px] uppercase tracking-wider text-rayls-grey">
-              Total Value Locked
-            </span>
-            <div className="flex items-center gap-2">
-              <span className="text-xl font-mono font-bold text-white drop-shadow-[0_0_10px_rgba(157,140,252,0.5)]">
-                R$ 12.450.000
-              </span>
+      {/* Hero Section with Metrics */}
+      <div className="z-10 w-full border-b border-rayls-border bg-rayls-charcoal/50 p-6 backdrop-blur-md">
+        <div className="max-w-7xl mx-auto">
+          <div className="mb-6">
+            <h1 className="text-2xl font-bold text-white mb-1">Protocol Overview</h1>
+            <p className="text-sm text-rayls-grey">Real-time institutional credit analytics</p>
+            <div className="mt-4 flex flex-wrap gap-3">
+              {/* Banks / Institutions CTA */}
+              <Link href="/investor/vaults">
+                <Button className="bg-rayls-lime text-black hover:bg-rayls-lime/80 font-semibold">
+                  For Institutions – View Capital Markets
+                </Button>
+              </Link>
+
+              {/* Farmers / Operators CTA (lower emphasis) */}
+              <Link href="/operator/farmers/new">
+                <Button
+                  variant="outline"
+                  className="border-rayls-border text-rayls-grey hover:text-white hover:border-rayls-lime/60"
+                >
+                  For Producers – Connect with Origination Desk
+                </Button>
+              </Link>
             </div>
           </div>
 
-          <div className="flex flex-col items-end">
-            <span className="text-[10px] uppercase tracking-wider text-rayls-grey">
-              Active Farmers
-            </span>
-            <span className="text-xl font-mono font-bold text-white">42</span>
-          </div>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            {/* TVL */}
+            <div className="space-y-1">
+              <div className="text-xs uppercase tracking-wider text-rayls-grey font-medium flex items-center gap-2">
+                <Wallet className="h-3 w-3" /> Total Value Locked
+              </div>
+              <div className="text-2xl font-mono font-bold text-white drop-shadow-[0_0_10px_rgba(157,140,252,0.3)]">
+                R$ 12.450.000
+              </div>
+              <div className="text-[10px] text-rayls-lime flex items-center gap-1">
+                <ArrowUpRight className="h-3 w-3" /> +2.4% (24h)
+              </div>
+            </div>
 
-          <div className="flex flex-col items-end">
-            <span className="text-[10px] uppercase tracking-wider text-rayls-grey">
-              Avg. Portfolio Yield
-            </span>
-            <div className="flex items-center gap-1">
-              <TrendingUp className="h-4 w-4 text-rayls-lime" />
-              <span className="text-xl font-mono font-bold text-rayls-lime">
-                14.2% APY
-              </span>
+            {/* APY */}
+            <div className="space-y-1">
+              <div className="text-xs uppercase tracking-wider text-rayls-grey font-medium flex items-center gap-2">
+                <TrendingUp className="h-3 w-3" /> Weighted Avg. APY
+              </div>
+              <div className="text-2xl font-mono font-bold text-rayls-lime">14.2%</div>
+              <div className="text-[10px] text-rayls-grey">Risk-adjusted return</div>
+            </div>
+
+            {/* Active Farmers */}
+            <div className="space-y-1">
+              <div className="text-xs uppercase tracking-wider text-rayls-grey font-medium flex items-center gap-2">
+                <Users className="h-3 w-3" /> Active Farmers
+              </div>
+              <div className="text-2xl font-mono font-bold text-white">42</div>
+              <div className="text-[10px] text-rayls-grey">Across 3 regions</div>
+            </div>
+
+            {/* Capital Deployed */}
+            <div className="space-y-1">
+              <div className="text-xs uppercase tracking-wider text-rayls-grey font-medium flex items-center gap-2">
+                <Sprout className="h-3 w-3" /> Capital Deployed
+              </div>
+              <div className="text-2xl font-mono font-bold text-white">R$ 8.100.000</div>
+              <div className="text-[10px] text-rayls-grey">65% Utilization</div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="relative flex-1 flex items-center justify-center">
+      {/* Main Map Content */}
+      <div className="relative flex-1 flex items-center justify-center min-h-[600px]">
         <div className="absolute inset-0 z-0">
           <BrazilMap />
-        </div>
-
-        {/* Interaction Layer */}
-        <div className="z-10 flex flex-col items-center gap-8">
-          {/* Toggle */}
-          <div className="flex rounded-full border border-rayls-border bg-rayls-charcoal p-1">
-            <button
-              onClick={() => setView("origination")}
-              className={`rounded-full px-6 py-2 text-sm font-medium transition-all ${
-                view === "origination"
-                  ? "bg-rayls-lime text-black shadow-[0_0_15px_rgba(217,249,79,0.3)]"
-                  : "text-rayls-grey hover:text-white"
-              }`}
-            >
-              Origination Desk
-            </button>
-            <button
-              onClick={() => setView("capital")}
-              className={`rounded-full px-6 py-2 text-sm font-medium transition-all ${
-                view === "capital"
-                  ? "bg-rayls-lime text-black shadow-[0_0_15px_rgba(217,249,79,0.3)]"
-                  : "text-rayls-grey hover:text-white"
-              }`}
-            >
-              Capital Markets
-            </button>
-          </div>
-
-          {/* Action Card */}
-          <Card className="w-[350px] border-rayls-border bg-rayls-charcoal/90 backdrop-blur-sm p-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <h2 className="mb-2 text-xl font-semibold text-white">
-              {view === "origination"
-                ? "Credit Origination"
-                : "Institutional Vaults"}
-            </h2>
-            <p className="mb-6 text-sm text-rayls-grey">
-              {view === "origination"
-                ? "Access AI-powered underwriting and risk assessment for agricultural assets."
-                : "Deploy capital into diversified, risk-tranched agricultural credit strategies."}
-            </p>
-
-            <Link
-              href={
-                view === "origination"
-                  ? "/operator/farmers/new"
-                  : "/investor/vaults"
-              }
-            >
-              <Button className="w-full bg-rayls-lime text-black hover:bg-rayls-lime/80 group">
-                {view === "origination" ? "Access Desk" : "View Opportunities"}
-                <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-              </Button>
-            </Link>
-          </Card>
         </div>
       </div>
     </main>

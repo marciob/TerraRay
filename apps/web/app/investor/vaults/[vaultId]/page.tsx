@@ -2,8 +2,15 @@
 "use client";
 
 import { notFound, useParams } from "next/navigation";
-import { useMemo, useState } from "react";
-import { ArrowDown, Wallet, Info, TrendingUp } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import {
+  ArrowDown,
+  Wallet,
+  TrendingUp,
+  Loader2,
+  CheckCircle2,
+  XCircle,
+} from "lucide-react";
 import {
   AreaChart,
   Area,
@@ -13,14 +20,24 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import { useAccount } from "wagmi";
+import {
+  useAccount,
+  useReadContract,
+  useWriteContract,
+  useWaitForTransactionReceipt,
+} from "wagmi";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
-import { DepositSchema, type DepositPayload } from "@/app/lib/schemas";
+import { parseUnits, formatUnits } from "viem";
 import { useDemo } from "@/app/lib/demo-context";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import {
+  CONTRACT_ADDRESSES,
+  AGRO_VAULT_ABI,
+  MOCK_STABLECOIN_ABI,
+} from "@/app/lib/contracts";
 
 // Mock data for the chart
 const chartData = [
@@ -35,12 +52,64 @@ const chartData = [
 
 export default function VaultDetailPage() {
   const params = useParams<{ vaultId: string }>();
-  const { vaults, notes, positions, deposit } = useDemo();
-  const { isConnected } = useAccount();
+  const { vaults, notes, positions } = useDemo();
+  const { address, isConnected } = useAccount();
   const [depositAmount, setDepositAmount] = useState<string>("");
+  const [approvalPending, setApprovalPending] = useState(false);
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const vaultId = decodeURIComponent(params.vaultId);
   const vault = vaults.find((candidate) => candidate.id === vaultId);
+
+  // Contract reads
+  const { data: usdcBalance, error: usdcError } = useReadContract({
+    address: CONTRACT_ADDRESSES.MockStablecoin,
+    abi: MOCK_STABLECOIN_ABI,
+    functionName: "balanceOf",
+    args: address ? [address] : undefined,
+    query: { enabled: !!address },
+  });
+
+  const { data: allowance, error: allowanceError } = useReadContract({
+    address: CONTRACT_ADDRESSES.MockStablecoin,
+    abi: MOCK_STABLECOIN_ABI,
+    functionName: "allowance",
+    args: address ? [address, CONTRACT_ADDRESSES.AgroVault] : undefined,
+    query: { enabled: !!address },
+  });
+
+  const { data: vaultShares, error: sharesError } = useReadContract({
+    address: CONTRACT_ADDRESSES.AgroVault,
+    abi: AGRO_VAULT_ABI,
+    functionName: "balanceOf",
+    args: address ? [address] : undefined,
+    query: { enabled: !!address },
+  });
+
+  const { data: totalAssets, error: assetsError } = useReadContract({
+    address: CONTRACT_ADDRESSES.AgroVault,
+    abi: AGRO_VAULT_ABI,
+    functionName: "totalAssets",
+  });
+
+  // Contract writes
+  const { writeContract: approveWrite, data: approveHash } = useWriteContract();
+  const { writeContract: depositWrite, data: depositHash } = useWriteContract();
+
+  // Transaction receipts
+  const { isLoading: isApprovePending, isSuccess: isApproveSuccess } =
+    useWaitForTransactionReceipt({
+      hash: approveHash,
+    });
+
+  const { isLoading: isDepositPending, isSuccess: isDepositSuccess } =
+    useWaitForTransactionReceipt({
+      hash: depositHash,
+    });
 
   if (!vault) {
     notFound();
@@ -53,14 +122,58 @@ export default function VaultDetailPage() {
 
   const position = positions[vault.id];
 
-  const handleDeposit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const amount = Number(depositAmount);
-    if (amount > 0) {
-      deposit(vault.id, amount);
-      setDepositAmount("");
+  const depositAmountBigInt = useMemo<bigint>(() => {
+    try {
+      return depositAmount ? parseUnits(depositAmount, 6) : 0n;
+    } catch {
+      return 0n;
+    }
+  }, [depositAmount]);
+
+  const allowanceBigInt = (allowance ?? 0n) as bigint;
+  const needsApproval =
+    depositAmountBigInt > 0n && allowanceBigInt < depositAmountBigInt;
+
+  const handleApprove = async () => {
+    if (!depositAmountBigInt || depositAmountBigInt === 0n) return;
+    setApprovalPending(true);
+    try {
+      approveWrite({
+        address: CONTRACT_ADDRESSES.MockStablecoin,
+        abi: MOCK_STABLECOIN_ABI,
+        functionName: "approve",
+        args: [CONTRACT_ADDRESSES.AgroVault, depositAmountBigInt],
+      });
+    } catch (error) {
+      console.error("Approval error:", error);
+      setApprovalPending(false);
     }
   };
+
+  const handleDeposit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!address || !depositAmountBigInt) return;
+
+    depositWrite({
+      address: CONTRACT_ADDRESSES.AgroVault,
+      abi: AGRO_VAULT_ABI,
+      functionName: "deposit",
+      args: [depositAmountBigInt, address],
+    });
+  };
+
+  // Reset states on success
+  useEffect(() => {
+    if (isApproveSuccess && approvalPending) {
+      setApprovalPending(false);
+    }
+  }, [isApproveSuccess, approvalPending]);
+
+  useEffect(() => {
+    if (isDepositSuccess) {
+      setDepositAmount("");
+    }
+  }, [isDepositSuccess]);
 
   return (
     <main className="min-h-screen bg-rayls-black text-white px-6 py-12 lg:px-12 font-sans">
@@ -77,10 +190,12 @@ export default function VaultDetailPage() {
               <span>
                 TVL:{" "}
                 <span className="text-white font-mono">
-                  {vault.tvl.toLocaleString("pt-BR", {
-                    style: "currency",
-                    currency: "BRL",
-                  })}
+                  {((totalAssets ?? 0n) as bigint) > 0n
+                    ? `$${formatUnits((totalAssets ?? 0n) as bigint, 6)}`
+                    : vault.tvl.toLocaleString("pt-BR", {
+                        style: "currency",
+                        currency: "BRL",
+                      })}
                 </span>
               </span>
               <span>
@@ -93,7 +208,7 @@ export default function VaultDetailPage() {
           </div>
 
           {/* Chart Section */}
-          <Card className="bg-rayls-charcoal border-rayls-border p-6 h-[350px] flex flex-col">
+          <Card className="bg-rayls-charcoal border-rayls-border p-6 flex flex-col">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-sm font-semibold text-white">
                 Projected vs Realized Yield
@@ -109,250 +224,247 @@ export default function VaultDetailPage() {
                 </div>
               </div>
             </div>
-            <div className="flex-1 w-full h-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData}>
-                  <defs>
-                    <linearGradient
-                      id="colorRealized"
-                      x1="0"
-                      y1="0"
-                      x2="0"
-                      y2="1"
-                    >
-                      <stop offset="5%" stopColor="#D9F94F" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#D9F94F" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    stroke="#27272A"
-                    vertical={false}
-                  />
-                  <XAxis
-                    dataKey="month"
-                    stroke="#A1A1AA"
-                    fontSize={12}
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <YAxis
-                    stroke="#A1A1AA"
-                    fontSize={12}
-                    tickLine={false}
-                    axisLine={false}
-                    tickFormatter={(val) => `${val}%`}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "#1A1A1A",
-                      borderColor: "#27272A",
-                      color: "#FFF",
-                    }}
-                    itemStyle={{ color: "#D9F94F" }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="realized"
-                    stroke="#D9F94F"
-                    strokeWidth={2}
-                    fillOpacity={1}
-                    fill="url(#colorRealized)"
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="projected"
-                    stroke="#A1A1AA"
-                    strokeWidth={1}
-                    strokeDasharray="5 5"
-                    fill="none"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
+            <div className="w-full h-[300px]">
+              {isClient && (
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={chartData}>
+                    <defs>
+                      <linearGradient
+                        id="colorRealized"
+                        x1="0"
+                        y1="0"
+                        x2="0"
+                        y2="1"
+                      >
+                        <stop
+                          offset="5%"
+                          stopColor="#D9F94F"
+                          stopOpacity={0.3}
+                        />
+                        <stop
+                          offset="95%"
+                          stopColor="#D9F94F"
+                          stopOpacity={0}
+                        />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke="#27272A"
+                      vertical={false}
+                    />
+                    <XAxis
+                      dataKey="month"
+                      stroke="#A1A1AA"
+                      fontSize={12}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <YAxis
+                      stroke="#A1A1AA"
+                      fontSize={12}
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={(value) => `${value}%`}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "#18181B",
+                        borderColor: "#27272A",
+                        borderRadius: "8px",
+                      }}
+                      itemStyle={{ color: "#fff" }}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="projected"
+                      stroke="#52525B"
+                      strokeDasharray="5 5"
+                      fill="none"
+                      strokeWidth={2}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="realized"
+                      stroke="#D9F94F"
+                      fill="url(#colorRealized)"
+                      strokeWidth={2}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              )}
             </div>
           </Card>
 
-          {/* Underlying Assets Table */}
-          <div>
-            <h3 className="text-xl font-semibold text-white mb-4">
+          {/* Underlying Assets List */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-white">
               Underlying Assets
             </h3>
-            <div className="rounded-xl border border-rayls-border bg-rayls-charcoal overflow-hidden">
-              <table className="w-full text-sm text-left">
-                <thead className="text-xs text-rayls-grey uppercase bg-rayls-dark border-b border-rayls-border">
-                  <tr>
-                    <th className="px-6 py-4">Asset ID</th>
-                    <th className="px-6 py-4">Collateral Type</th>
-                    <th className="px-6 py-4">Maturity</th>
-                    <th className="px-6 py-4">Status</th>
-                    <th className="px-6 py-4 text-right">Risk Grade</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-rayls-border">
-                  {vaultNotes.length === 0 ? (
-                    <tr>
-                      <td
-                        colSpan={5}
-                        className="px-6 py-8 text-center text-rayls-grey"
-                      >
-                        No assets currently in this pool.
-                      </td>
-                    </tr>
-                  ) : (
-                    vaultNotes.map((note) => (
-                      <tr
-                        key={note.id}
-                        className="hover:bg-rayls-hover transition-colors"
-                      >
-                        <td className="px-6 py-4 font-mono text-xs text-white">
-                          {note.id.split("-")[0]}...
-                        </td>
-                        <td className="px-6 py-4">{vault.cropTypes[0]}</td>
-                        <td className="px-6 py-4 text-rayls-grey">
-                          {note.tenorMonths} Months
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-2">
-                            <div
-                              className={`w-2 h-2 rounded-full ${
-                                note.status === "Active"
-                                  ? "bg-rayls-lime shadow-[0_0_8px_#D9F94F]"
-                                  : "bg-red-500"
-                              }`}
-                            />
-                            <span className="text-xs">
-                              {note.status === "Active"
-                                ? "Performing"
-                                : note.status}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <Badge
-                            variant="outline"
-                            className="border-rayls-purple text-rayls-purple text-xs"
-                          >
-                            {vault.riskBand}
-                          </Badge>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+            <Card className="bg-rayls-charcoal border-rayls-border overflow-hidden">
+              <div className="grid grid-cols-5 gap-4 p-4 text-xs font-semibold text-rayls-grey uppercase tracking-wider border-b border-rayls-border">
+                <div>Asset ID</div>
+                <div>Collateral Type</div>
+                <div>Maturity</div>
+                <div>Status</div>
+                <div className="text-right">Risk Grade</div>
+              </div>
+              <div className="divide-y divide-rayls-border">
+                {vaultNotes.length > 0 ? (
+                  vaultNotes.map((note) => (
+                    <div
+                      key={note.id}
+                      className="grid grid-cols-5 gap-4 p-4 text-sm items-center hover:bg-white/5 transition-colors"
+                    >
+                      <div className="font-mono text-rayls-lime truncate">
+                        {note.id}
+                      </div>
+                      <div>{note.collateralType}</div>
+                      <div>{note.maturityDate}</div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-rayls-lime shadow-[0_0_8px_#D9F94F]" />
+                        <span className="text-white">Performing</span>
+                      </div>
+                      <div className="text-right">
+                        <Badge
+                          variant="outline"
+                          className="border-rayls-lime text-rayls-lime bg-rayls-lime/10"
+                        >
+                          {note.riskGrade}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="p-8 text-center text-rayls-grey">
+                    No assets currently in this vault.
+                  </div>
+                )}
+              </div>
+            </Card>
           </div>
         </div>
 
-        {/* Right Sidebar (1/3): Deposit */}
-        <div className="space-y-6">
-          <Card className="bg-rayls-charcoal border-rayls-border p-6 sticky top-24">
-            <h2 className="text-lg font-semibold text-white mb-6">
+        {/* Right Column (1/3): Deposit/Withdraw & Holdings */}
+        <div className="space-y-8">
+          <Card className="bg-rayls-charcoal border-rayls-border p-6 sticky top-8">
+            <h3 className="text-lg font-semibold text-white mb-6">
               Liquidity Provision
-            </h2>
+            </h3>
 
+            {/* If disconnected, show connect button */}
             {!isConnected ? (
-              <div className="text-center py-8 space-y-4">
-                <p className="text-sm text-rayls-grey">
-                  Connect your wallet to access this institutional vault.
+              <div className="flex flex-col items-center gap-4 py-8">
+                <Wallet className="w-12 h-12 text-rayls-grey mb-2" />
+                <p className="text-rayls-grey text-center mb-4">
+                  Connect your wallet to deposit USDC and start earning yield.
                 </p>
-                <div className="flex justify-center">
-                  <ConnectButton label="Connect Wallet" />
-                </div>
+                <ConnectButton />
               </div>
             ) : (
-              <form onSubmit={handleDeposit} className="space-y-4 relative">
-                <div className="bg-rayls-dark p-4 rounded-lg border border-rayls-border">
-                  <div className="flex justify-between text-xs text-rayls-grey mb-2">
-                    <span>You Deposit</span>
-                    <span className="flex items-center gap-1">
-                      <Wallet className="h-3 w-3" /> Balance: $50k
+              <form onSubmit={handleDeposit} className="space-y-6">
+                {/* Deposit Input */}
+                <div className="bg-black/40 rounded-lg p-4 border border-rayls-border">
+                  <div className="flex justify-between mb-2 text-sm">
+                    <span className="text-rayls-grey">You Deposit</span>
+                    <span className="text-rayls-grey flex items-center gap-1">
+                      <Wallet className="w-3 h-3" />
+                      Balance:{" "}
+                      {usdcBalance
+                        ? formatUnits(usdcBalance as bigint, 6)
+                        : "0"}{" "}
+                      USDC
                     </span>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
                     <Input
                       type="number"
                       placeholder="0.00"
-                      className="border-none bg-transparent text-2xl font-mono p-0 focus-visible:ring-0 h-auto placeholder:text-rayls-grey/30"
                       value={depositAmount}
                       onChange={(e) => setDepositAmount(e.target.value)}
+                      className="bg-transparent border-none text-2xl font-mono text-white placeholder:text-rayls-grey/50 focus-visible:ring-0 p-0 h-auto"
                     />
-                    <Badge className="bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 border-none">
+                    <Badge className="bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 border-none text-sm px-3 py-1 h-8">
                       USDC
                     </Badge>
                   </div>
                 </div>
 
-                <div className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 top-[48%] z-10">
-                  <div className="bg-rayls-black rounded-full p-2 border border-rayls-border text-rayls-grey">
-                    <ArrowDown className="h-4 w-4" />
-                  </div>
+                <div className="flex justify-center">
+                  <ArrowDown className="text-rayls-grey h-5 w-5" />
                 </div>
 
-                <div className="bg-rayls-dark p-4 rounded-lg border border-rayls-border">
-                  <div className="flex justify-between text-xs text-rayls-grey mb-2">
-                    <span>You Receive</span>
-                    <span>(Estimated)</span>
+                {/* Receive Output */}
+                <div className="bg-black/40 rounded-lg p-4 border border-rayls-border">
+                  <div className="flex justify-between mb-2 text-sm">
+                    <span className="text-rayls-grey">You Receive</span>
+                    <span className="text-rayls-grey">(Estimated)</span>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <div className="text-2xl font-mono text-white flex-1 truncate">
-                      {depositAmount
-                        ? (Number(depositAmount) * 1).toFixed(2)
-                        : "0.00"}
-                    </div>
-                    <Badge className="bg-rayls-lime/20 text-rayls-lime hover:bg-rayls-lime/30 border-none">
+                  <div className="flex items-center justify-between">
+                    <span className="text-2xl font-mono text-white">
+                      {depositAmount || "0.00"}
+                    </span>
+                    <Badge className="bg-rayls-lime/20 text-rayls-lime hover:bg-rayls-lime/30 border-none text-sm px-3 py-1 h-8">
                       trCERRADO
                     </Badge>
                   </div>
                 </div>
 
-                <div className="bg-rayls-black/50 p-3 rounded-lg text-xs space-y-2">
+                {/* Info Rows */}
+                <div className="space-y-2 text-sm">
                   <div className="flex justify-between text-rayls-grey">
                     <span>Projected Earnings (12m)</span>
-                    <span className="text-rayls-lime">
-                      {depositAmount
-                        ? `+ ${(
-                            Number(depositAmount) * vault.baseApr
-                          ).toLocaleString("en-US", {
-                            style: "currency",
-                            currency: "USD",
-                          })}`
-                        : "--"}
-                    </span>
+                    <span className="text-white font-mono">--</span>
                   </div>
                   <div className="flex justify-between text-rayls-grey">
                     <span>Protocol Fee</span>
-                    <span>0.1%</span>
+                    <span className="text-white font-mono">0.1%</span>
                   </div>
                 </div>
 
-                <Button
-                  type="submit"
-                  className="w-full bg-white text-black hover:bg-gray-200 font-bold h-12"
-                >
-                  Confirm Deposit
-                </Button>
+                {/* Action Button */}
+                {needsApproval ? (
+                  <Button
+                    type="button"
+                    onClick={handleApprove}
+                    disabled={approvalPending || isApprovePending}
+                    className="w-full bg-rayls-lime text-black hover:bg-rayls-lime/90 font-bold h-12"
+                  >
+                    {approvalPending || isApprovePending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Approving USDC...
+                      </>
+                    ) : (
+                      "Approve USDC"
+                    )}
+                  </Button>
+                ) : (
+                  <Button
+                    type="submit"
+                    disabled={
+                      isDepositPending || !depositAmountBigInt || needsApproval
+                    }
+                    className="w-full bg-white text-black hover:bg-gray-200 font-bold h-12"
+                  >
+                    {isDepositPending ? "Depositing..." : "Confirm Deposit"}
+                  </Button>
+                )}
               </form>
             )}
           </Card>
 
           {/* Holdings Card */}
-          {position && (
+          {((vaultShares ?? 0n) as bigint) > 0n && (
             <Card className="bg-rayls-charcoal border-rayls-border p-6">
               <h3 className="text-sm font-semibold text-rayls-grey uppercase mb-4">
                 Your Position
               </h3>
               <div className="space-y-4">
                 <div>
-                  <div className="text-xs text-rayls-grey">Current Value</div>
+                  <div className="text-xs text-rayls-grey">Shares</div>
                   <div className="text-2xl font-mono font-bold text-white">
-                    {(
-                      (position.shares ?? 0) *
-                      (vault.tvl / (position.deposited || 1))
-                    ).toLocaleString("en-US", {
-                      style: "currency",
-                      currency: "BRL",
-                    })}
+                    {formatUnits((vaultShares ?? 0n) as bigint, 15)} trCERRADO
                   </div>
                 </div>
                 <div className="flex justify-between text-sm border-t border-rayls-border pt-4">
