@@ -9,7 +9,6 @@ import {
 } from "@rainbow-me/rainbowkit";
 import { WagmiProvider, cookieStorage, createStorage, http } from "wagmi";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
-import { useMemo } from "react";
 
 // Polyfill for SSR (RainbowKit/CoinbaseWallet bug)
 if (typeof window === "undefined") {
@@ -48,27 +47,23 @@ const raylsTestnet = {
   testnet: true,
 } as const;
 
+// Create config outside the component to prevent re-initialization in Strict Mode
+const config = getDefaultConfig({
+  appName: "TerraRay",
+  projectId: "YOUR_PROJECT_ID",
+  chains: [raylsTestnet],
+  ssr: true,
+  storage: createStorage({
+    storage: cookieStorage,
+  }),
+  transports: {
+    [raylsTestnet.id]: http(),
+  },
+});
+
+const queryClient = new QueryClient();
+
 export function Web3Provider({ children }: { children: React.ReactNode }) {
-  // Memoize config and queryClient to prevent re-initialization
-  const config = useMemo(
-    () =>
-      getDefaultConfig({
-        appName: "TerraRay",
-        projectId: "YOUR_PROJECT_ID",
-        chains: [raylsTestnet],
-        ssr: true,
-        storage: createStorage({
-          storage: cookieStorage,
-        }),
-        transports: {
-          [raylsTestnet.id]: http(),
-        },
-      }),
-    []
-  );
-
-  const queryClient = useMemo(() => new QueryClient(), []);
-
   return (
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>

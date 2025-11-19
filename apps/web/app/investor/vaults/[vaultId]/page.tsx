@@ -12,6 +12,7 @@ import {
   XCircle,
   Users,
   MapPin,
+  Sparkles,
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -32,6 +33,7 @@ import {
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { parseUnits, formatUnits } from "viem";
 import { useDemo } from "@/app/lib/demo-context";
+import type { VaultAiSummaryResponse } from "@/app/lib/schemas";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -65,6 +67,11 @@ export default function VaultDetailPage() {
   const [depositAmount, setDepositAmount] = useState<string>("");
   const [approvalPending, setApprovalPending] = useState(false);
   const [isClient, setIsClient] = useState(false);
+  const [aiSummary, setAiSummary] = useState<VaultAiSummaryResponse | null>(
+    null
+  );
+  const [aiSummaryError, setAiSummaryError] = useState<string | null>(null);
+  const [aiSummaryLoading, setAiSummaryLoading] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
@@ -183,10 +190,62 @@ export default function VaultDetailPage() {
     }
   }, [isDepositSuccess]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadAiSummary() {
+      if (!vault) return;
+      setAiSummaryLoading(true);
+      setAiSummaryError(null);
+
+      try {
+        const response = await fetch("/api/vault-ai-summary", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            vault,
+            notes: vaultNotes,
+          }),
+        });
+
+        const json = await response.json();
+
+        if (!response.ok) {
+          if (!cancelled) {
+            setAiSummaryError(
+              json?.message ?? "AI summary is temporarily unavailable."
+            );
+          }
+          return;
+        }
+
+        if (!cancelled) {
+          setAiSummary(json.data as VaultAiSummaryResponse);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setAiSummaryError("Unable to load AI summary right now.");
+        }
+      } finally {
+        if (!cancelled) {
+          setAiSummaryLoading(false);
+        }
+      }
+    }
+
+    loadAiSummary();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [vault, vaultNotes]);
+
   return (
     <main className="min-h-screen bg-rayls-black text-white px-6 py-12 lg:px-12 font-sans">
       <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left Column (2/3): Chart & Assets */}
+        {/* Left Column (2/3): AI Overview, Chart & Assets */}
         <div className="lg:col-span-2 space-y-8">
           <div className="flex flex-col gap-2 mb-6">
             <div className="flex items-center gap-2 text-sm text-rayls-grey uppercase tracking-wider">
@@ -214,6 +273,66 @@ export default function VaultDetailPage() {
               </span>
             </div>
           </div>
+
+          {/* AI Vault Overview */}
+          <Card className="bg-rayls-charcoal border-rayls-border p-6">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2 text-xs text-rayls-grey uppercase tracking-wider">
+                <Sparkles className="h-4 w-4 text-rayls-lime" />
+                <span>AI Vault Overview</span>
+              </div>
+              {aiSummaryLoading && (
+                <Loader2 className="h-4 w-4 text-rayls-grey animate-spin" />
+              )}
+            </div>
+
+            {aiSummaryError ? (
+              <p className="text-xs text-rayls-grey">{aiSummaryError}</p>
+            ) : aiSummary ? (
+              <div className="space-y-4">
+                <p className="text-sm text-rayls-grey leading-relaxed">
+                  {aiSummary.summary}
+                </p>
+                {aiSummary.highlights.length > 0 && (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                    {aiSummary.highlights.map((item) => {
+                      const tone =
+                        item.sentiment === "positive"
+                          ? "text-rayls-lime"
+                          : item.sentiment === "negative"
+                          ? "text-red-400"
+                          : "text-rayls-grey";
+
+                      return (
+                        <div
+                          key={item.label}
+                          className="rounded-lg border border-rayls-border bg-black/30 px-3 py-2"
+                        >
+                          <div className="text-[10px] uppercase tracking-wide text-rayls-grey">
+                            {item.label}
+                          </div>
+                          <div className={`mt-1 font-mono text-xs ${tone}`}>
+                            {item.value}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                {aiSummary.riskOverview && (
+                  <div className="border-t border-rayls-border pt-3 text-xs text-rayls-grey">
+                    <span className="font-semibold text-white">Risk lens: </span>
+                    {aiSummary.riskOverview}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p className="text-xs text-rayls-grey">
+                AI is analyzing this vault&apos;s loan book and risk profile.
+                Insights will appear here in a moment.
+              </p>
+            )}
+          </Card>
 
           {/* Chart Section */}
           <Card className="bg-rayls-charcoal border-rayls-border p-6 flex flex-col">

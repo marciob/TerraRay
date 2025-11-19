@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  serverExternalPackages: ["openai"],
   webpack: (config) => {
     config.externals.push("pino-pretty", "lokijs", "encoding", "bufferutil", "utf-8-validate");
     config.resolve.alias = {

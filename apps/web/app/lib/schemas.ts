@@ -110,4 +110,29 @@ export const RepaymentSchema = z.object({
 
 export type RepaymentPayload = z.infer<typeof RepaymentSchema>;
 
+// ---------- AI-powered vault summary ----------
+
+export const VaultAiSummaryRequestSchema = z.object({
+  vault: VaultSchema,
+  notes: z.array(LoanNoteSchema),
+});
+
+export type VaultAiSummaryRequest = z.infer<typeof VaultAiSummaryRequestSchema>;
+
+export const VaultAiSummaryResponseSchema = z.object({
+  summary: z.string(),
+  highlights: z
+    .array(
+      z.object({
+        label: z.string(),
+        value: z.string(),
+        sentiment: z.enum(["positive", "neutral", "negative"]).optional(),
+      })
+    )
+    .default([]),
+  riskOverview: z.string().optional(),
+});
+
+export type VaultAiSummaryResponse = z.infer<typeof VaultAiSummaryResponseSchema>;
+
 
