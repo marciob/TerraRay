@@ -43,6 +43,8 @@ contract AgroVault is ERC4626, Ownable, ReentrancyGuard {
         uint256 principalReduction
     );
 
+    event NoteDefaulted(uint256 indexed noteId, uint256 writeOffAmount);
+
     constructor(
         IERC20Metadata asset_,
         InvestorWhitelist investorWhitelist_,
@@ -198,6 +200,20 @@ contract AgroVault is ERC4626, Ownable, ReentrancyGuard {
         }
 
         emit NoteRepaymentRecorded(noteId, amount, principalReduction);
+    }
+
+    /// @notice Mark a note as defaulted and write off its remaining principal.
+    /// @dev Realizes a loss for the vault by reducing total assets.
+    function defaultNote(uint256 noteId) external nonReentrant onlyOwner {
+        uint256 outstanding = noteOutstandingPrincipal[noteId];
+        require(outstanding > 0, "AgroVault: no outstanding");
+
+        noteOutstandingPrincipal[noteId] = 0;
+        totalOutstandingPrincipal -= outstanding;
+
+        farmerNote.setStatusDefaulted(noteId);
+
+        emit NoteDefaulted(noteId, outstanding);
     }
 
     /// @inheritdoc ERC4626

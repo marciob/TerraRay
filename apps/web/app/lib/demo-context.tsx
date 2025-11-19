@@ -1,3 +1,4 @@
+//app/lib/demo-context.tsx
 "use client";
 
 import { createContext, useContext, useMemo, useState } from "react";
@@ -28,9 +29,7 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
   const [farmers, setFarmers] = useState<Farmer[]>(mockFarmers);
   const [notes, setNotes] = useState<LoanNote[]>(mockNotes);
   const [vaults, setVaults] = useState<Vault[]>(mockVaults);
-  const [positions, setPositions] = useState<
-    DemoState["positions"]
-  >({});
+  const [positions, setPositions] = useState<DemoState["positions"]>({});
 
   const value = useMemo<DemoState>(() => {
     const addFarmer = (farmer: Farmer) => {
@@ -46,8 +45,8 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
 
       setVaults((prev) =>
         prev.map((vault) =>
-          vault.id === vaultId ? { ...vault, tvl: vault.tvl + amount } : vault,
-        ),
+          vault.id === vaultId ? { ...vault, tvl: vault.tvl + amount } : vault
+        )
       );
 
       setPositions((prev) => {
@@ -79,8 +78,8 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
               prevVaults.map((vault) =>
                 vault.id === note.vaultId
                   ? { ...vault, tvl: vault.tvl + amount }
-                  : vault,
-              ),
+                  : vault
+              )
             );
           }
 
@@ -89,7 +88,7 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
             outstanding: newOutstanding,
             status: newOutstanding === 0 ? "Repaid" : note.status,
           };
-        }),
+        })
       );
     };
 
@@ -115,5 +114,3 @@ export function useDemo() {
   }
   return ctx;
 }
-
-

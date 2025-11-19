@@ -1,3 +1,4 @@
+//app/page.tsx
 "use client";
 
 import { useState } from "react";
@@ -16,25 +17,33 @@ export default function LandingPage() {
       <div className="z-10 flex flex-col md:flex-row items-center justify-end border-b border-rayls-border bg-rayls-charcoal/50 p-4 backdrop-blur-md">
         <div className="flex gap-8">
           <div className="flex flex-col items-end">
-            <span className="text-[10px] uppercase tracking-wider text-rayls-grey">Total Value Locked</span>
+            <span className="text-[10px] uppercase tracking-wider text-rayls-grey">
+              Total Value Locked
+            </span>
             <div className="flex items-center gap-2">
               <span className="text-xl font-mono font-bold text-white drop-shadow-[0_0_10px_rgba(157,140,252,0.5)]">
                 R$ 12.450.000
               </span>
             </div>
           </div>
-          
+
           <div className="flex flex-col items-end">
-             <span className="text-[10px] uppercase tracking-wider text-rayls-grey">Active Farmers</span>
-             <span className="text-xl font-mono font-bold text-white">42</span>
+            <span className="text-[10px] uppercase tracking-wider text-rayls-grey">
+              Active Farmers
+            </span>
+            <span className="text-xl font-mono font-bold text-white">42</span>
           </div>
 
           <div className="flex flex-col items-end">
-             <span className="text-[10px] uppercase tracking-wider text-rayls-grey">Avg. Portfolio Yield</span>
-             <div className="flex items-center gap-1">
-                <TrendingUp className="h-4 w-4 text-rayls-lime" />
-                <span className="text-xl font-mono font-bold text-rayls-lime">14.2% APY</span>
-             </div>
+            <span className="text-[10px] uppercase tracking-wider text-rayls-grey">
+              Avg. Portfolio Yield
+            </span>
+            <div className="flex items-center gap-1">
+              <TrendingUp className="h-4 w-4 text-rayls-lime" />
+              <span className="text-xl font-mono font-bold text-rayls-lime">
+                14.2% APY
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -42,7 +51,7 @@ export default function LandingPage() {
       {/* Main Content */}
       <div className="relative flex-1 flex items-center justify-center">
         <div className="absolute inset-0 z-0">
-            <BrazilMap />
+          <BrazilMap />
         </div>
 
         {/* Interaction Layer */}
@@ -73,21 +82,29 @@ export default function LandingPage() {
 
           {/* Action Card */}
           <Card className="w-[350px] border-rayls-border bg-rayls-charcoal/90 backdrop-blur-sm p-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-             <h2 className="mb-2 text-xl font-semibold text-white">
-               {view === "origination" ? "Credit Origination" : "Institutional Vaults"}
-             </h2>
-             <p className="mb-6 text-sm text-rayls-grey">
-               {view === "origination" 
-                 ? "Access AI-powered underwriting and risk assessment for agricultural assets." 
-                 : "Deploy capital into diversified, risk-tranched agricultural credit strategies."}
-             </p>
-             
-             <Link href={view === "origination" ? "/operator/farmers/new" : "/investor/vaults"}>
-               <Button className="w-full bg-rayls-lime text-black hover:bg-rayls-lime/80 group">
-                 {view === "origination" ? "Access Desk" : "View Opportunities"}
-                 <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-               </Button>
-             </Link>
+            <h2 className="mb-2 text-xl font-semibold text-white">
+              {view === "origination"
+                ? "Credit Origination"
+                : "Institutional Vaults"}
+            </h2>
+            <p className="mb-6 text-sm text-rayls-grey">
+              {view === "origination"
+                ? "Access AI-powered underwriting and risk assessment for agricultural assets."
+                : "Deploy capital into diversified, risk-tranched agricultural credit strategies."}
+            </p>
+
+            <Link
+              href={
+                view === "origination"
+                  ? "/operator/farmers/new"
+                  : "/investor/vaults"
+              }
+            >
+              <Button className="w-full bg-rayls-lime text-black hover:bg-rayls-lime/80 group">
+                {view === "origination" ? "Access Desk" : "View Opportunities"}
+                <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+              </Button>
+            </Link>
           </Card>
         </div>
       </div>

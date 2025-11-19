@@ -3,8 +3,23 @@
 import "@rainbow-me/rainbowkit/styles.css";
 
 import { getDefaultConfig, RainbowKitProvider, darkTheme } from "@rainbow-me/rainbowkit";
-import { WagmiProvider } from "wagmi";
+import { WagmiProvider, cookieStorage, createStorage, http } from "wagmi";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
+
+// Polyfill for SSR (RainbowKit/CoinbaseWallet bug)
+if (typeof window === "undefined") {
+  const noop = () => {};
+  // @ts-ignore
+  global.indexedDB = {
+    open: () => ({
+      result: { close: noop, createObjectStore: () => ({}) as any },
+      addEventListener: noop,
+      removeEventListener: noop,
+      onsuccess: noop,
+      onerror: noop,
+    } as any),
+  };
+}
 
 // Define Rayls Testnet
 const raylsTestnet = {
@@ -29,6 +44,12 @@ const config = getDefaultConfig({
   projectId: "YOUR_PROJECT_ID", // TODO: Replace with a valid WalletConnect Project ID if needed
   chains: [raylsTestnet],
   ssr: true,
+  storage: createStorage({
+    storage: cookieStorage,
+  }),
+  transports: {
+    [raylsTestnet.id]: http(),
+  },
 });
 
 const queryClient = new QueryClient();

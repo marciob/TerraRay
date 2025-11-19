@@ -6,9 +6,9 @@ import type { TypedContractEvent, TypedDeferredTopicFilter, TypedEventLog, Typed
   
 
   export interface AgroVaultInterface extends Interface {
-    getFunction(nameOrSignature: "allowance" | "anyCropTypeAllowed" | "approve" | "asset" | "balanceOf" | "convertToAssets" | "convertToShares" | "decimals" | "deposit" | "farmerNote" | "farmerRegistry" | "fundNote" | "investorWhitelist" | "isAllowedCropType" | "maxDeposit" | "maxMint" | "maxRedeem" | "maxWithdraw" | "mint" | "name" | "noteOutstandingPrincipal" | "owner" | "previewDeposit" | "previewMint" | "previewRedeem" | "previewWithdraw" | "recordRepayment" | "redeem" | "renounceOwnership" | "riskTierMax" | "riskTierMin" | "symbol" | "totalAssets" | "totalOutstandingPrincipal" | "totalSupply" | "transfer" | "transferFrom" | "transferOwnership" | "withdraw"): FunctionFragment;
+    getFunction(nameOrSignature: "allowance" | "anyCropTypeAllowed" | "approve" | "asset" | "balanceOf" | "convertToAssets" | "convertToShares" | "decimals" | "defaultNote" | "deposit" | "farmerNote" | "farmerRegistry" | "fundNote" | "investorWhitelist" | "isAllowedCropType" | "maxDeposit" | "maxMint" | "maxRedeem" | "maxWithdraw" | "mint" | "name" | "noteOutstandingPrincipal" | "owner" | "previewDeposit" | "previewMint" | "previewRedeem" | "previewWithdraw" | "recordRepayment" | "redeem" | "renounceOwnership" | "riskTierMax" | "riskTierMin" | "symbol" | "totalAssets" | "totalOutstandingPrincipal" | "totalSupply" | "transfer" | "transferFrom" | "transferOwnership" | "withdraw"): FunctionFragment;
 
-    getEvent(nameOrSignatureOrTopic: "Approval" | "Deposit" | "NoteFunded" | "NoteRepaymentRecorded" | "OwnershipTransferred" | "Transfer" | "Withdraw"): EventFragment;
+    getEvent(nameOrSignatureOrTopic: "Approval" | "Deposit" | "NoteDefaulted" | "NoteFunded" | "NoteRepaymentRecorded" | "OwnershipTransferred" | "Transfer" | "Withdraw"): EventFragment;
 
     encodeFunctionData(functionFragment: 'allowance', values: [AddressLike, AddressLike]): string;
 encodeFunctionData(functionFragment: 'anyCropTypeAllowed', values?: undefined): string;
@@ -18,6 +18,7 @@ encodeFunctionData(functionFragment: 'balanceOf', values: [AddressLike]): string
 encodeFunctionData(functionFragment: 'convertToAssets', values: [BigNumberish]): string;
 encodeFunctionData(functionFragment: 'convertToShares', values: [BigNumberish]): string;
 encodeFunctionData(functionFragment: 'decimals', values?: undefined): string;
+encodeFunctionData(functionFragment: 'defaultNote', values: [BigNumberish]): string;
 encodeFunctionData(functionFragment: 'deposit', values: [BigNumberish, AddressLike]): string;
 encodeFunctionData(functionFragment: 'farmerNote', values?: undefined): string;
 encodeFunctionData(functionFragment: 'farmerRegistry', values?: undefined): string;
@@ -58,6 +59,7 @@ decodeFunctionResult(functionFragment: 'balanceOf', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'convertToAssets', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'convertToShares', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'decimals', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'defaultNote', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'deposit', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'farmerNote', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'farmerRegistry', data: BytesLike): Result;
@@ -108,6 +110,18 @@ decodeFunctionResult(functionFragment: 'withdraw', data: BytesLike): Result;
       export type InputTuple = [sender: AddressLike, owner: AddressLike, assets: BigNumberish, shares: BigNumberish];
       export type OutputTuple = [sender: string, owner: string, assets: bigint, shares: bigint];
       export interface OutputObject {sender: string, owner: string, assets: bigint, shares: bigint };
+      export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
+      export type Filter = TypedDeferredTopicFilter<Event>
+      export type Log = TypedEventLog<Event>
+      export type LogDescription = TypedLogDescription<Event>
+    }
+
+  
+
+    export namespace NoteDefaultedEvent {
+      export type InputTuple = [noteId: BigNumberish, writeOffAmount: BigNumberish];
+      export type OutputTuple = [noteId: bigint, writeOffAmount: bigint];
+      export interface OutputObject {noteId: bigint, writeOffAmount: bigint };
       export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
       export type Filter = TypedDeferredTopicFilter<Event>
       export type Log = TypedEventLog<Event>
@@ -270,6 +284,14 @@ decodeFunctionResult(functionFragment: 'withdraw', data: BytesLike): Result;
       [],
       [bigint],
       'view'
+    >
+    
+
+    
+    defaultNote: TypedContractMethod<
+      [noteId: BigNumberish, ],
+      [void],
+      'nonpayable'
     >
     
 
@@ -564,6 +586,11 @@ getFunction(nameOrSignature: 'decimals'): TypedContractMethod<
       [bigint],
       'view'
     >;
+getFunction(nameOrSignature: 'defaultNote'): TypedContractMethod<
+      [noteId: BigNumberish, ],
+      [void],
+      'nonpayable'
+    >;
 getFunction(nameOrSignature: 'deposit'): TypedContractMethod<
       [assets: BigNumberish, receiver: AddressLike, ],
       [bigint],
@@ -722,6 +749,7 @@ getFunction(nameOrSignature: 'withdraw'): TypedContractMethod<
 
     getEvent(key: 'Approval'): TypedContractEvent<ApprovalEvent.InputTuple, ApprovalEvent.OutputTuple, ApprovalEvent.OutputObject>;
 getEvent(key: 'Deposit'): TypedContractEvent<DepositEvent.InputTuple, DepositEvent.OutputTuple, DepositEvent.OutputObject>;
+getEvent(key: 'NoteDefaulted'): TypedContractEvent<NoteDefaultedEvent.InputTuple, NoteDefaultedEvent.OutputTuple, NoteDefaultedEvent.OutputObject>;
 getEvent(key: 'NoteFunded'): TypedContractEvent<NoteFundedEvent.InputTuple, NoteFundedEvent.OutputTuple, NoteFundedEvent.OutputObject>;
 getEvent(key: 'NoteRepaymentRecorded'): TypedContractEvent<NoteRepaymentRecordedEvent.InputTuple, NoteRepaymentRecordedEvent.OutputTuple, NoteRepaymentRecordedEvent.OutputObject>;
 getEvent(key: 'OwnershipTransferred'): TypedContractEvent<OwnershipTransferredEvent.InputTuple, OwnershipTransferredEvent.OutputTuple, OwnershipTransferredEvent.OutputObject>;
@@ -736,6 +764,10 @@ getEvent(key: 'Withdraw'): TypedContractEvent<WithdrawEvent.InputTuple, Withdraw
 
       'Deposit(address,address,uint256,uint256)': TypedContractEvent<DepositEvent.InputTuple, DepositEvent.OutputTuple, DepositEvent.OutputObject>;
       Deposit: TypedContractEvent<DepositEvent.InputTuple, DepositEvent.OutputTuple, DepositEvent.OutputObject>;
+    
+
+      'NoteDefaulted(uint256,uint256)': TypedContractEvent<NoteDefaultedEvent.InputTuple, NoteDefaultedEvent.OutputTuple, NoteDefaultedEvent.OutputObject>;
+      NoteDefaulted: TypedContractEvent<NoteDefaultedEvent.InputTuple, NoteDefaultedEvent.OutputTuple, NoteDefaultedEvent.OutputObject>;
     
 
       'NoteFunded(uint256,address,uint256,uint256,uint256,address)': TypedContractEvent<NoteFundedEvent.InputTuple, NoteFundedEvent.OutputTuple, NoteFundedEvent.OutputObject>;
