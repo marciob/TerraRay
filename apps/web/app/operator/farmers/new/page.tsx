@@ -108,9 +108,14 @@ export default function UnderwritingPage() {
     event.preventDefault();
     setRegisteredFarmer(null);
 
-    const parsed = UnderwriteRequestSchema.safeParse(parseForm(form.values));
+    console.log("Form submitted, current values:", form.values);
+    const parsedInput = parseForm(form.values);
+    console.log("Parsed form data:", parsedInput);
+    
+    const parsed = UnderwriteRequestSchema.safeParse(parsedInput);
 
     if (!parsed.success) {
+      console.error("Validation failed:", parsed.error.issues);
       const fieldErrors: Record<string, string> = {};
       parsed.error.issues.forEach((issue) => {
         const path = issue.path.join(".");
@@ -121,19 +126,39 @@ export default function UnderwritingPage() {
       setForm((prev) => ({ ...prev, errors: fieldErrors }));
       return;
     }
+    
+    console.log("Validation passed, sending to API:", parsed.data);
 
     setForm((prev) => ({ ...prev, submitting: true }));
     setResult(null);
 
     try {
       // Simulate AI delay
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      const response = await mockUnderwrite(parsed.data);
-      setResult(response);
+      // await new Promise((resolve) => setTimeout(resolve, 1500));
+      // const response = await mockUnderwrite(parsed.data);
+
+      const res = await fetch('/api/underwrite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(parsed.data),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        console.error('API Error Details:', errorData);
+        throw new Error(errorData.error || `Failed to analyze credit risk: ${res.status}`);
+      }
+
+      const json = await res.json();
+      
+      // The API returns { data: savedDoc, aiAnalysis: ... }
+      // We want the AI analysis part to populate the result view
+      setResult(json.aiAnalysis);
     } catch (error) {
+      console.error("Form submission error:", error);
       setForm((prev) => ({
         ...prev,
-        errors: { ...prev.errors, root: "Analysis failed." },
+        errors: { ...prev.errors, root: "Analysis failed. Please try again." },
       }));
     } finally {
       setForm((prev) => ({ ...prev, submitting: false }));
@@ -333,6 +358,14 @@ export default function UnderwritingPage() {
             ) : null}
             {form.submitting ? "Analyzing..." : "Analyze Credit Risk"}
           </Button>
+
+          {/* Error Message Display */}
+          {form.errors.root && (
+            <div className="mt-4 p-3 bg-red-500/10 border border-red-500/30 rounded-md flex items-center gap-2 text-red-500 text-sm">
+              <AlertTriangle className="h-4 w-4" />
+              {form.errors.root}
+            </div>
+          )}
         </form>
       </div>
 
