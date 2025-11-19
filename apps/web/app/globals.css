@@ -30,6 +30,11 @@ body {
   font-family: var(--font-sans);
 }
 
+/* Force cursor pointer on interactive elements */
+button, a {
+  cursor: pointer;
+}
+
 /* Scrollbar styling for that "terminal" feel */
 ::-webkit-scrollbar {
   width: 8px;

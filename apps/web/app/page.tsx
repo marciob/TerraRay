@@ -18,7 +18,7 @@ export default function LandingPage() {
           <div className="h-6 w-6 rounded-full bg-rayls-lime/20 flex items-center justify-center">
             <Globe className="h-4 w-4 text-rayls-lime" />
           </div>
-          <h1 className="text-lg font-bold tracking-tight">RAYLS <span className="font-normal text-rayls-grey">PROTOCOL</span></h1>
+          <h1 className="text-lg font-bold tracking-tight">TERRARAY</h1>
         </div>
         
         <div className="flex gap-8 mt-4 md:mt-0">
