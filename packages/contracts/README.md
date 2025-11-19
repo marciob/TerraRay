@@ -1,7 +1,7 @@
 ## Contracts Package
 
 This package contains the on-chain smart contract code and related TypeScript types
-for the Rayls AgroCredit / TerraRay protocol.
+for the Rayls TerraRay protocol.
 
 - **Purpose**: shared contracts, ABIs, and generated types used by apps and other packages.
 - **Scope**: core protocol contracts (e.g. `FarmerRegistry`, `FarmerNote`, `AgroVault`, `InvestorWhitelist`) and utilities.

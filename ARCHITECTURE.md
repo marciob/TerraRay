@@ -1,7 +1,7 @@
 ## Architecture Overview
 
 This document captures the current domain model and high-level architecture for
-the Rayls-based AgroCredit / TerraRay protocol. It is the **source of truth**
+the Rayls-based TerraRay protocol. It is the **source of truth**
 for vault strategies, on-chain vs off-chain responsibilities, and the
 underwriting service contract.
 
@@ -92,6 +92,7 @@ To avoid ambiguity and floating point issues, all monetary and rate fields are
 defined precisely:
 
 - **Principal and maxCreditLimit**
+
   - All amounts (e.g. `principal` on `FarmerNote`, `maxCreditLimit` from
     underwriting) are:
   - `uint256` in **ERC-20 smallest units**, aligned with the vault's stablecoin
@@ -112,6 +113,7 @@ the public chain holds aggregated and risk-tiered information only.
 ### On-chain (Rayls Public Chain)
 
 - **FarmerRegistry**
+
   - **Fields**:
     - `farmerAddress`: address
     - `approved`: `bool`
@@ -123,6 +125,7 @@ the public chain holds aggregated and risk-tiered information only.
     tiering and classification.
 
 - **FarmerNote (ERC-721 loan token)**
+
   - **Fields (per note/token)**:
     - `farmer`: address (reference into `FarmerRegistry`)
     - `principal`: uint (stablecoin-denominated principal amount)
@@ -133,6 +136,7 @@ the public chain holds aggregated and risk-tiered information only.
     loan, held by the vault.
 
 - **AgroVault (ERC-4626)**
+
   - **Fields / parameters (per vault instance)**:
     - `asset`: stablecoin address (ERC-20)
     - `riskTierMin`: `uint8`
@@ -163,6 +167,7 @@ the public chain holds aggregated and risk-tiered information only.
 ### Off-chain (Bank / Co-op / Private Rayls Side)
 
 - **Data held off-chain**:
+
   - Farmer legal identity and documentation (KYC/KYB).
   - GPS/location, land-use data.
   - Financial statements and historical collections data.
@@ -219,6 +224,7 @@ The `POST /underwrite` endpoint returns the following JSON object:
 From the underwriting response, only a **subset** is ever written on-chain:
 
 - **Used on-chain**:
+
   - `riskTier`
   - `suggestedAnnualRateBps` (or a human-reviewed, final tuned rate)
   - Optionally `maxCreditLimit` (as a constraint, enforced by off-chain
@@ -234,5 +240,3 @@ From the underwriting response, only a **subset** is ever written on-chain:
 These off-chain fields are surfaced in the UI and internal risk dashboards but
 are not stored on the public chain, aligning with Rayls' privacy and
 institutional focus.
-
-

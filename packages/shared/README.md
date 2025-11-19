@@ -1,7 +1,7 @@
 ## Shared Package
 
 This package contains shared TypeScript utilities, domain models, and helpers
-used across the Rayls AgroCredit / TerraRay apps and services.
+used across the Rayls TerraRay apps and services.
 
 - **Purpose**: central place for cross-cutting logic that is not specific to a single app.
 - **Scope**: types, validation helpers, formatting utilities, API client helpers, and other shared code.

@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Agro Credit Vaults – Rayls Demo",
+  title: "TerraRay Vaults – Rayls Demo",
   description:
     "Rayls-powered multi-farmer ERC-4626 vaults for Brazilian agricultural credit.",
 };
