@@ -101,7 +101,7 @@ export default function RepaymentsPage() {
     }
 
     const note = notes.find(
-      (candidate) => candidate.id === parsed.success ? parsed.data.noteId : form.values.noteId,
+      (candidate) => candidate.id === (parsed.success ? parsed.data.noteId : form.values.noteId),
     );
 
     if (parsed.success && note) {

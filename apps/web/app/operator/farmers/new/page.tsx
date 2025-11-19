@@ -2,17 +2,24 @@
 
 import { useState } from "react";
 import { z } from "zod";
+import { motion, AnimatePresence } from "framer-motion";
+import { ShieldCheck, Lock, Activity, Check, AlertTriangle, Sprout, Banknote } from "lucide-react";
 import {
   UnderwriteRequestSchema,
   type UnderwriteRequest,
   type UnderwriteResponse,
   cropTypes,
   regions,
-  farmerRiskTiers,
   type Farmer,
 } from "@/app/lib/schemas";
 import { mockUnderwrite } from "@/app/lib/mock-services";
 import { useDemo } from "@/app/lib/demo-context";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+
+// ... schema imports ...
 
 type UnderwriteFormState = {
   values: Partial<UnderwriteRequest>;
@@ -37,36 +44,36 @@ const emptyForm: UnderwriteFormState = {
 };
 
 function parseForm(values: UnderwriteFormState["values"]): UnderwriteRequest {
-  const coerceNumber = (value: unknown) =>
-    typeof value === "number"
-      ? value
-      : typeof value === "string" && value.trim().length > 0
-        ? Number(value)
-        : NaN;
+    const coerceNumber = (value: unknown) =>
+      typeof value === "number"
+        ? value
+        : typeof value === "string" && value.trim().length > 0
+          ? Number(value)
+          : NaN;
+  
+    const payload: UnderwriteRequest = {
+      name: values.name ?? "",
+      documentId: values.documentId ?? "",
+      region: (values.region ??
+        regions[0]) as UnderwriteRequest["region"],
+      cropType: (values.cropType ??
+        cropTypes[0]) as UnderwriteRequest["cropType"],
+      requestedAmount: coerceNumber(values.requestedAmount),
+      tenorMonths:
+        typeof values.tenorMonths === "number"
+          ? values.tenorMonths
+          : Number(values.tenorMonths ?? 12),
+      hectares: coerceNumber(values.hectares),
+      historicalYieldTonsPerHectare: coerceNumber(
+        values.historicalYieldTonsPerHectare,
+      ),
+      coopMember: Boolean(values.coopMember),
+    };
+  
+    return payload;
+  }
 
-  const payload: UnderwriteRequest = {
-    name: values.name ?? "",
-    documentId: values.documentId ?? "",
-    region: (values.region ??
-      regions[0]) as UnderwriteRequest["region"],
-    cropType: (values.cropType ??
-      cropTypes[0]) as UnderwriteRequest["cropType"],
-    requestedAmount: coerceNumber(values.requestedAmount),
-    tenorMonths:
-      typeof values.tenorMonths === "number"
-        ? values.tenorMonths
-        : Number(values.tenorMonths ?? 12),
-    hectares: coerceNumber(values.hectares),
-    historicalYieldTonsPerHectare: coerceNumber(
-      values.historicalYieldTonsPerHectare,
-    ),
-    coopMember: Boolean(values.coopMember),
-  };
-
-  return payload;
-}
-
-export default function NewFarmerPage() {
+export default function UnderwritingPage() {
   const { addFarmer } = useDemo();
   const [form, setForm] = useState<UnderwriteFormState>(emptyForm);
   const [result, setResult] = useState<UnderwriteResponse | null>(null);
@@ -93,9 +100,7 @@ export default function NewFarmerPage() {
     event.preventDefault();
     setRegisteredFarmer(null);
 
-    const parsed = UnderwriteRequestSchema.safeParse(
-      parseForm(form.values),
-    );
+    const parsed = UnderwriteRequestSchema.safeParse(parseForm(form.values));
 
     if (!parsed.success) {
       const fieldErrors: Record<string, string> = {};
@@ -105,10 +110,7 @@ export default function NewFarmerPage() {
           fieldErrors[path] = issue.message;
         }
       });
-      setForm((prev) => ({
-        ...prev,
-        errors: fieldErrors,
-      }));
+      setForm((prev) => ({ ...prev, errors: fieldErrors }));
       return;
     }
 
@@ -116,15 +118,14 @@ export default function NewFarmerPage() {
     setResult(null);
 
     try {
+      // Simulate AI delay
+      await new Promise(resolve => setTimeout(resolve, 1500));
       const response = await mockUnderwrite(parsed.data);
       setResult(response);
     } catch (error) {
       setForm((prev) => ({
         ...prev,
-        errors: {
-          ...prev.errors,
-          root: "Failed to run underwriting. This is a demo-only client-side mock.",
-        },
+        errors: { ...prev.errors, root: "Analysis failed." },
       }));
     } finally {
       setForm((prev) => ({ ...prev, submitting: false }));
@@ -133,14 +134,8 @@ export default function NewFarmerPage() {
 
   const handleRegisterFarmer = () => {
     if (!result) return;
-
-    const parsed = UnderwriteRequestSchema.safeParse(
-      parseForm(form.values),
-    );
-
-    if (!parsed.success) {
-      return;
-    }
+    const parsed = UnderwriteRequestSchema.safeParse(parseForm(form.values));
+    if (!parsed.success) return;
 
     const farmer: Farmer = {
       id: `farmer-${Date.now()}`,
@@ -156,330 +151,252 @@ export default function NewFarmerPage() {
     setRegisteredFarmer(farmer);
   };
 
-  const disableApprove =
-    !result ||
-    form.submitting ||
-    (registeredFarmer && registeredFarmer.name === form.values.name);
-
   return (
-    <main className="mx-auto flex min-h-screen max-w-5xl flex-col gap-10 px-6 py-10 lg:px-8">
-      <header className="flex flex-col gap-2">
-        <p className="text-xs font-medium uppercase tracking-wide text-emerald-600">
-          Flow A · Operator
-        </p>
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-          Underwrite &amp; Approve Farmer
-        </h1>
-        <p className="max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">
-          Capture the core KYC + agronomic data, run an AI-style underwriting
-          call, then register the farmer into an on-chain registry. All calls
-          here are mocked on the client to keep the demo self-contained.
-        </p>
-      </header>
-
-      <section className="grid gap-8 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-        <form
-          onSubmit={handleSubmit}
-          className="space-y-6 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-950"
-        >
-          <div className="space-y-4">
-            <div>
-              <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300">
-                Farmer name
-              </label>
-              <input
-                type="text"
-                className="mt-1 w-full rounded-md border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm outline-none ring-emerald-500 focus:bg-white focus:ring-1 dark:border-zinc-700 dark:bg-zinc-900"
-                value={form.values.name ?? ""}
-                onChange={(event) =>
-                  handleChange("name", event.target.value)
-                }
-              />
-              {form.errors.name ? (
-                <p className="mt-1 text-xs text-red-500">
-                  {form.errors.name}
-                </p>
-              ) : null}
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300">
-                  CPF/CNPJ or document ID
-                </label>
-                <input
-                  type="text"
-                  className="mt-1 w-full rounded-md border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm outline-none ring-emerald-500 focus:bg-white focus:ring-1 dark:border-zinc-700 dark:bg-zinc-900"
-                  value={form.values.documentId ?? ""}
-                  onChange={(event) =>
-                    handleChange("documentId", event.target.value)
-                  }
-                />
-                {form.errors.documentId ? (
-                  <p className="mt-1 text-xs text-red-500">
-                    {form.errors.documentId}
-                  </p>
-                ) : null}
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300">
-                  Region
-                </label>
-                <select
-                  className="mt-1 w-full rounded-md border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm outline-none ring-emerald-500 focus:bg-white focus:ring-1 dark:border-zinc-700 dark:bg-zinc-900"
-                  value={form.values.region ?? ""}
-                  onChange={(event) =>
-                    handleChange("region", event.target.value)
-                  }
-                >
-                  <option value="">Select region</option>
-                  {regions.map((region) => (
-                    <option key={region} value={region}>
-                      {region}
-                    </option>
-                  ))}
-                </select>
-                {form.errors.region ? (
-                  <p className="mt-1 text-xs text-red-500">
-                    {form.errors.region}
-                  </p>
-                ) : null}
-              </div>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300">
-                  Crop type
-                </label>
-                <select
-                  className="mt-1 w-full rounded-md border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm outline-none ring-emerald-500 focus:bg-white focus:ring-1 dark:border-zinc-700 dark:bg-zinc-900"
-                  value={form.values.cropType ?? ""}
-                  onChange={(event) =>
-                    handleChange("cropType", event.target.value)
-                  }
-                >
-                  <option value="">Select crop</option>
-                  {cropTypes.map((crop) => (
-                    <option key={crop} value={crop}>
-                      {crop}
-                    </option>
-                  ))}
-                </select>
-                {form.errors.cropType ? (
-                  <p className="mt-1 text-xs text-red-500">
-                    {form.errors.cropType}
-                  </p>
-                ) : null}
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300">
-                  Hectares financed
-                </label>
-                <input
-                  type="number"
-                  min={1}
-                  className="mt-1 w-full rounded-md border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm outline-none ring-emerald-500 focus:bg-white focus:ring-1 dark:border-zinc-700 dark:bg-zinc-900"
-                  value={form.values.hectares ?? ""}
-                  onChange={(event) =>
-                    handleChange("hectares", event.target.value)
-                  }
-                />
-                {form.errors.hectares ? (
-                  <p className="mt-1 text-xs text-red-500">
-                    {form.errors.hectares}
-                  </p>
-                ) : null}
-              </div>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-3">
-              <div>
-                <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300">
-                  Requested amount (BRL)
-                </label>
-                <input
-                  type="number"
-                  min={1}
-                  className="mt-1 w-full rounded-md border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm outline-none ring-emerald-500 focus:bg-white focus:ring-1 dark:border-zinc-700 dark:bg-zinc-900"
-                  value={form.values.requestedAmount ?? ""}
-                  onChange={(event) =>
-                    handleChange("requestedAmount", event.target.value)
-                  }
-                />
-                {form.errors.requestedAmount ? (
-                  <p className="mt-1 text-xs text-red-500">
-                    {form.errors.requestedAmount}
-                  </p>
-                ) : null}
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300">
-                  Tenor (months)
-                </label>
-                <input
-                  type="number"
-                  min={3}
-                  max={36}
-                  className="mt-1 w-full rounded-md border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm outline-none ring-emerald-500 focus:bg-white focus:ring-1 dark:border-zinc-700 dark:bg-zinc-900"
-                  value={form.values.tenorMonths ?? 12}
-                  onChange={(event) =>
-                    handleChange("tenorMonths", Number(event.target.value))
-                  }
-                />
-                {form.errors.tenorMonths ? (
-                  <p className="mt-1 text-xs text-red-500">
-                    {form.errors.tenorMonths}
-                  </p>
-                ) : null}
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300">
-                  Hist. yield (t/ha)
-                </label>
-                <input
-                  type="number"
-                  step="0.1"
-                  min={0}
-                  className="mt-1 w-full rounded-md border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm outline-none ring-emerald-500 focus:bg-white focus:ring-1 dark:border-zinc-700 dark:bg-zinc-900"
-                  value={form.values.historicalYieldTonsPerHectare ?? ""}
-                  onChange={(event) =>
-                    handleChange(
-                      "historicalYieldTonsPerHectare",
-                      event.target.value,
-                    )
-                  }
-                />
-                {form.errors.historicalYieldTonsPerHectare ? (
-                  <p className="mt-1 text-xs text-red-500">
-                    {form.errors.historicalYieldTonsPerHectare}
-                  </p>
-                ) : null}
-              </div>
-            </div>
-
-            <label className="inline-flex items-center gap-2 text-xs text-zinc-700 dark:text-zinc-300">
-              <input
-                type="checkbox"
-                className="h-3 w-3 rounded border border-zinc-400 text-emerald-600 focus:ring-emerald-500"
-                checked={Boolean(form.values.coopMember)}
-                onChange={(event) =>
-                  handleChange("coopMember", event.target.checked)
-                }
-              />
-              Member of partner coop / integrator
-            </label>
-
-            {form.errors.root ? (
-              <p className="mt-1 text-xs text-red-500">{form.errors.root}</p>
-            ) : null}
-          </div>
-
-          <button
-            type="submit"
-            className="inline-flex items-center justify-center rounded-full bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-700/40"
-            disabled={form.submitting}
-          >
-            {form.submitting ? "Running underwriting..." : "Run underwriting"}
-          </button>
-        </form>
-
-        <div className="space-y-4">
-          <section className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
-            <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
-              Underwriting result
-            </h2>
-            {!result ? (
-              <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">
-                Submit the form to see risk tier, band, max credit limit and
-                an explanation from the Rayls-style underwriting engine.
-              </p>
-            ) : (
-              <div className="mt-4 space-y-3 text-sm">
-                <div className="flex flex-wrap gap-3 text-xs">
-                  <span className="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 font-medium text-emerald-700 ring-1 ring-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-200 dark:ring-emerald-900">
-                    Tier {result.riskTier} · {result.riskBand}
-                  </span>
-                  <span className="inline-flex items-center rounded-full bg-zinc-50 px-3 py-1 font-medium text-zinc-700 ring-1 ring-zinc-200 dark:bg-zinc-900 dark:text-zinc-200 dark:ring-zinc-700">
-                    Rate ~ {(result.rate * 100).toFixed(1)}% per year
-                  </span>
-                  <span className="inline-flex items-center rounded-full bg-zinc-50 px-3 py-1 text-zinc-700 ring-1 ring-zinc-200 dark:bg-zinc-900 dark:text-zinc-200 dark:ring-zinc-700">
-                    Max credit limit: BRL{" "}
-                    {result.maxCreditLimit.toLocaleString("en-US")}
-                  </span>
-                  <span className="inline-flex items-center rounded-full bg-zinc-50 px-3 py-1 text-zinc-700 ring-1 ring-zinc-200 dark:bg-zinc-900 dark:text-zinc-200 dark:ring-zinc-700">
-                    Confidence {(result.confidence * 100).toFixed(0)}%
-                  </span>
-                </div>
-
-                {result.flags.length ? (
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
-                      Flags
-                    </p>
-                    <ul className="space-y-1 text-xs text-zinc-600 dark:text-zinc-400">
-                      {result.flags.map((flag) => (
-                        <li key={flag}>• {flag}</li>
-                      ))}
-                    </ul>
-                  </div>
-                ) : null}
-
-                <p className="text-xs text-zinc-600 dark:text-zinc-400">
-                  {result.explanation}
-                </p>
-
-                <button
-                  type="button"
-                  className="mt-2 inline-flex items-center justify-center rounded-full bg-zinc-900 px-4 py-2 text-xs font-medium text-white shadow-sm transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:bg-zinc-800/40 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
-                  onClick={handleRegisterFarmer}
-                  disabled={disableApprove}
-                >
-                  Approve &amp; register farmer
-                </button>
-
-                {registeredFarmer ? (
-                  <p className="mt-2 text-xs text-emerald-600 dark:text-emerald-400">
-                    Farmer registered in demo registry as{" "}
-                    <span className="font-semibold">
-                      {registeredFarmer.name}
-                    </span>{" "}
-                    with tier {registeredFarmer.riskTier} and max credit limit
-                    BRL{" "}
-                    {registeredFarmer.maxCreditLimit.toLocaleString(
-                      "en-US",
-                    )}
-                    .
-                  </p>
-                ) : null}
-              </div>
-            )}
-          </section>
-
-          <section className="rounded-2xl border border-dashed border-zinc-200 bg-zinc-50 p-4 text-xs text-zinc-600 dark:border-zinc-800 dark:bg-zinc-950/40 dark:text-zinc-400">
-            <p className="font-medium text-zinc-700 dark:text-zinc-300">
-              Demo notes
-            </p>
-            <p className="mt-1">
-              In the full Rayls integration this screen would POST to{" "}
-              <code className="rounded bg-zinc-900 px-1.5 py-0.5 text-[0.7rem] text-zinc-100">
-                /underwrite
-              </code>{" "}
-              on your backend and then send a transaction to your{" "}
-              <span className="font-semibold">FarmerRegistry</span>{" "}
-              contract. For now, everything happens in local React state so
-              you can demo the full flow without deploying contracts.
-            </p>
-          </section>
+    <div className="flex min-h-screen bg-rayls-black text-white font-sans">
+      {/* LEFT: Input Panel */}
+      <div className="w-full lg:w-1/2 p-8 lg:p-12 border-r border-rayls-border overflow-y-auto">
+        <div className="mb-8">
+            <h1 className="text-2xl font-bold tracking-tight mb-2">Origination Desk</h1>
+            <p className="text-rayls-grey text-sm">Enter farmer details to generate AI-driven credit risk thesis.</p>
         </div>
-      </section>
-    </main>
+
+        <form onSubmit={handleSubmit} className="space-y-8">
+            {/* Section: Identity */}
+            <div className="space-y-4">
+                <h2 className="text-sm font-semibold text-rayls-lime uppercase tracking-wider flex items-center gap-2">
+                    <ShieldCheck className="h-4 w-4" /> Identity & Privacy
+                </h2>
+                <div className="grid gap-4">
+                    <div>
+                        <label className="block text-xs font-medium text-rayls-grey mb-1">CPF Hash (Privacy Preserved)</label>
+                        <Input 
+                            placeholder="0x..." 
+                            value={form.values.documentId ?? ""}
+                            onChange={(e) => handleChange("documentId", e.target.value)}
+                            className="font-mono"
+                        />
+                        {form.errors.documentId && <p className="text-xs text-red-500 mt-1">{form.errors.documentId}</p>}
+                    </div>
+                    <div>
+                         <label className="block text-xs font-medium text-rayls-grey mb-1">Farmer Legal Name (Off-chain)</label>
+                         <Input 
+                            value={form.values.name ?? ""}
+                            onChange={(e) => handleChange("name", e.target.value)}
+                         />
+                         {form.errors.name && <p className="text-xs text-red-500 mt-1">{form.errors.name}</p>}
+                    </div>
+                </div>
+            </div>
+
+            {/* Section: Crop & Land */}
+             <div className="space-y-4">
+                <h2 className="text-sm font-semibold text-rayls-lime uppercase tracking-wider flex items-center gap-2">
+                    <Sprout className="h-4 w-4" /> Crop & Land Data
+                </h2>
+                <div className="grid grid-cols-2 gap-4">
+                     <div>
+                        <label className="block text-xs font-medium text-rayls-grey mb-1">Region</label>
+                        <select 
+                            className="flex h-10 w-full rounded-md border border-rayls-border bg-rayls-input px-3 py-2 text-sm text-white focus:ring-2 focus:ring-rayls-lime outline-none"
+                            value={form.values.region ?? ""}
+                            onChange={(e) => handleChange("region", e.target.value)}
+                        >
+                             <option value="">Select...</option>
+                             {regions.map(r => <option key={r} value={r}>{r}</option>)}
+                        </select>
+                     </div>
+                     <div>
+                        <label className="block text-xs font-medium text-rayls-grey mb-1">Crop Type</label>
+                         <select 
+                            className="flex h-10 w-full rounded-md border border-rayls-border bg-rayls-input px-3 py-2 text-sm text-white focus:ring-2 focus:ring-rayls-lime outline-none"
+                            value={form.values.cropType ?? ""}
+                            onChange={(e) => handleChange("cropType", e.target.value)}
+                        >
+                             <option value="">Select...</option>
+                             {cropTypes.map(c => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                     </div>
+                     <div>
+                         <label className="block text-xs font-medium text-rayls-grey mb-1">Hectares</label>
+                         <Input 
+                            type="number" 
+                            value={form.values.hectares ?? ""} 
+                            onChange={(e) => handleChange("hectares", e.target.value)}
+                         />
+                     </div>
+                     <div>
+                         <label className="block text-xs font-medium text-rayls-grey mb-1">Hist. Yield (t/ha)</label>
+                         <Input 
+                            type="number" 
+                            step="0.1"
+                            value={form.values.historicalYieldTonsPerHectare ?? ""} 
+                            onChange={(e) => handleChange("historicalYieldTonsPerHectare", e.target.value)}
+                         />
+                     </div>
+                </div>
+            </div>
+
+            {/* Section: Financial Request */}
+             <div className="space-y-4">
+                <h2 className="text-sm font-semibold text-rayls-lime uppercase tracking-wider flex items-center gap-2">
+                    <Banknote className="h-4 w-4" /> Financial Request
+                </h2>
+                 <div className="grid grid-cols-2 gap-4">
+                     <div>
+                         <label className="block text-xs font-medium text-rayls-grey mb-1">Amount (BRL)</label>
+                         <Input 
+                            type="number" 
+                            value={form.values.requestedAmount ?? ""} 
+                            onChange={(e) => handleChange("requestedAmount", e.target.value)}
+                         />
+                     </div>
+                     <div>
+                         <label className="block text-xs font-medium text-rayls-grey mb-1">Tenor (Months)</label>
+                         <Input 
+                            type="number" 
+                            value={form.values.tenorMonths ?? 12} 
+                            onChange={(e) => handleChange("tenorMonths", Number(e.target.value))}
+                         />
+                     </div>
+                </div>
+                 <label className="flex items-center gap-2 text-xs text-rayls-grey cursor-pointer">
+                    <input 
+                        type="checkbox" 
+                        className="rounded border-rayls-border bg-rayls-input text-rayls-lime focus:ring-rayls-lime"
+                        checked={Boolean(form.values.coopMember)}
+                        onChange={(e) => handleChange("coopMember", e.target.checked)}
+                    />
+                    Member of partner cooperative
+                </label>
+            </div>
+
+            <Button 
+                type="submit" 
+                disabled={form.submitting}
+                className="w-full bg-rayls-lime text-black hover:bg-rayls-lime/90 font-bold"
+            >
+                {form.submitting ? <Activity className="animate-spin mr-2" /> : null}
+                {form.submitting ? "Analyzing..." : "Analyze Credit Risk"}
+            </Button>
+        </form>
+      </div>
+
+      {/* RIGHT: AI Command Center */}
+      <div className="hidden lg:flex lg:w-1/2 relative bg-black items-center justify-center p-12">
+        {/* Background Grid */}
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:40px_40px]" />
+
+        <AnimatePresence mode="wait">
+            {!result && !form.submitting && (
+                <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="text-center text-rayls-grey/50"
+                >
+                    <div className="border border-rayls-border/30 rounded-full w-32 h-32 flex items-center justify-center mx-auto mb-4">
+                        <Activity className="h-12 w-12" />
+                    </div>
+                    <p>Awaiting Input Data...</p>
+                </motion.div>
+            )}
+            
+            {form.submitting && (
+                 <motion.div 
+                    key="loading"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="flex flex-col items-center"
+                >
+                    <div className="relative w-32 h-32 flex items-center justify-center mb-4">
+                        <motion.div 
+                            className="absolute inset-0 border-t-2 border-rayls-lime rounded-full"
+                            animate={{ rotate: 360 }}
+                            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                        />
+                        <div className="text-2xl font-mono text-rayls-lime">AI</div>
+                    </div>
+                    <p className="text-rayls-lime animate-pulse font-mono">COMPUTING RISK VECTOR...</p>
+                </motion.div>
+            )}
+
+            {result && (
+                <motion.div 
+                    key="result"
+                    initial={{ opacity: 0, scale: 0.95, filter: "blur(10px)" }}
+                    animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
+                    className="w-full max-w-md z-10"
+                >
+                    <Card className="border-rayls-purple/50 bg-rayls-charcoal shadow-[0_0_30px_rgba(157,140,252,0.15)]">
+                        <div className="p-6 space-y-6">
+                            {/* Header with Privacy Badge */}
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <h3 className="text-rayls-grey text-xs uppercase tracking-widest">Risk Assessment</h3>
+                                    <div className="text-2xl font-bold text-white mt-1">Credit Scorecard</div>
+                                </div>
+                                <Badge variant="secondary" className="gap-1 bg-rayls-purple/20 text-rayls-purple border-rayls-purple/50">
+                                    <Lock className="h-3 w-3" /> ZK-Verified
+                                </Badge>
+                            </div>
+
+                            {/* Credit Score Gauge */}
+                            <div className="flex items-center justify-between border-b border-rayls-border pb-6">
+                                <div className="relative h-24 w-24 flex items-center justify-center rounded-full border-4 border-rayls-lime/20">
+                                    <div className="absolute inset-0 rounded-full border-4 border-rayls-lime border-l-transparent rotate-45" />
+                                    <div className="text-center">
+                                        <div className="text-2xl font-bold text-white">850</div>
+                                        <div className="text-[10px] text-rayls-grey">/ 1000</div>
+                                    </div>
+                                </div>
+                                <div className="text-right space-y-2">
+                                    <div className="flex flex-col items-end">
+                                        <span className="text-xs text-rayls-grey uppercase">Risk Tier</span>
+                                        <span className="text-xl font-bold text-rayls-lime">{result.riskTier} - {result.riskBand}</span>
+                                    </div>
+                                    <div className="flex flex-col items-end">
+                                        <span className="text-xs text-rayls-grey uppercase">Max Limit</span>
+                                        <span className="text-lg font-mono text-white">R$ {result.maxCreditLimit.toLocaleString('pt-BR')}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* AI Thesis */}
+                            <div>
+                                <h4 className="text-sm font-semibold text-white mb-2">AI Risk Thesis</h4>
+                                <p className="text-sm text-rayls-grey leading-relaxed">
+                                    {result.explanation}
+                                </p>
+                            </div>
+
+                            {/* Actions */}
+                            <div className="pt-4">
+                                <Button 
+                                    onClick={handleRegisterFarmer}
+                                    disabled={!!registeredFarmer}
+                                    className="w-full bg-white text-black hover:bg-gray-200 font-bold"
+                                >
+                                    {registeredFarmer ? (
+                                        <>
+                                            <Check className="mr-2 h-4 w-4" /> Authenticated on Chain
+                                        </>
+                                    ) : (
+                                        "Approve & Register on Rayls"
+                                    )}
+                                </Button>
+                                {registeredFarmer && (
+                                    <p className="text-center text-[10px] text-rayls-lime mt-2 animate-pulse">
+                                        Transaction Confirmed: {registeredFarmer.id}
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+                    </Card>
+                </motion.div>
+            )}
+        </AnimatePresence>
+      </div>
+    </div>
   );
 }
-
-
-

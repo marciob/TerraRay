@@ -1,0 +1,853 @@
+---
+id: introduction
+title: What Is Semaphore?
+sidebar_position: 1
+slug: /
+---
+
+## Overview
+
+[Semaphore](https://github.com/semaphore-protocol/semaphore/tree/main) is a [zero-knowledge](https://z.cash/technology/zksnarks) protocol that allows you to cast a message (for example, a vote or endorsement) as a provable group member without revealing your identity.
+Additionally, it provides a simple mechanism to prevent double-signaling.
+Use cases include private voting, whistleblowing, anonymous DAOs and mixers.
+
+For in-depth technical details about Semaphore, refer to the [Semaphore V4 Specification](https://github.com/zkspecs/zkspecs/blob/main/specs/3/README.md).
+
+## Features
+
+With Semaphore, you can allow your users to do the following:
+
+1. [Create a Semaphore identity](/guides/identities/).
+2. [Add their Semaphore identity to a group (i.e. _Merkle tree_)](/guides/groups/).
+3. [Send a verifiable, anonymous message (e.g a vote or endorsement)](/guides/proofs/).
+
+When a user broadcasts a message, Semaphore zero-knowledge
+proofs can ensure that the user has joined the group and hasn't already cast a message with their nullifier.
+
+Semaphore uses on-chain Solidity contracts and off-chain JavaScript libraries that work in tandem.
+
+-   Off chain, JavaScript libraries can be used to create identities, manage groups and generate proofs.
+-   On chain, Solidity contracts can be used to manage groups and verify proofs.
+
+## Developer benefits
+
+Semaphore is designed to be a simple and generic _privacy layer_ for decentralized applications (dApps) on Ethereum. It encourages modular application design, allowing dApp developers to choose and customize the on-chain and off-chain components they need.
+
+## About the code
+
+The core of the protocol is the [circuit logic](https://github.com/semaphore-protocol/semaphore/tree/main/packages/circuits/src/semaphore.circom).
+In addition to circuits,
+Semaphore provides [Solidity contracts](https://github.com/semaphore-protocol/semaphore/tree/main/packages/contracts)
+and [JavaScript libraries](https://github.com/semaphore-protocol/semaphore/tree/main#-packages) that allow developers to generate zero-knowledge proofs and verify them with minimal effort.
+
+## Trusted Setup Ceremony
+
+The [secure parameters](https://snark-artifacts.pse.dev) for generating valid proofs with Semaphore circuits were generated in a [Trusted Setup Ceremony](https://ceremony.pse.dev/projects/Semaphore%20V4%20Ceremony) that was completed with over 400 participants on [13 July 2024](https://etherscan.io/block/20300394).
+
+### Audits
+
+| Version | Auditors                          | Report                                                                           | Scope                                |
+| ------- | --------------------------------- | -------------------------------------------------------------------------------- | ------------------------------------ |
+| v2.0.0  | [PSE](https://pse.dev/)           | [Semaphore_2.0.0_Audit.pdf](https://semaphore.pse.dev/Semaphore_2.0.0_Audit.pdf) | `circuits`, `contracts`              |
+| v2.5.0  | [PSE](https://pse.dev/)           | [Semaphore_2.5.0_Audit.pdf](https://semaphore.pse.dev/Semaphore_2.5.0_Audit.pdf) | `contracts`, `libraries`             |
+| v3.0.0  | [Veridise](https://veridise.com/) | [Semaphore_3.0.0_Audit.pdf](https://semaphore.pse.dev/Semaphore_3.0.0_Audit.pdf) | `circuits`, `contracts`              |
+| v4.0.0  | [PSE](https://pse.dev/)           | [Semaphore_4.0.0_Audit.pdf](https://semaphore.pse.dev/Semaphore_4.0.0_Audit.pdf) | `circuits`, `contracts`, `libraries` |
+
+######
+
+---
+sidebar_position: 2
+---
+
+# Getting started
+
+Semaphore provides an official CLI to set up your project with Hardhat. If your NPM version is 5.2 or higher you can use NPX:
+
+```bash
+npx @semaphore-protocol/cli create my-app --template monorepo-ethers
+```
+
+Otherwise, install `@semaphore-protocol/cli` globally and run the `create` command:
+
+```bash
+npm i -g @semaphore-protocol/cli
+semaphore create my-app --template monorepo-ethers
+```
+
+:::info
+The supported templates are: [`contracts-hardhat`](https://github.com/semaphore-protocol/semaphore/tree/main/packages/cli-template-contracts-hardhat), [`monorepo-ethers`](https://github.com/semaphore-protocol/semaphore/tree/main/packages/cli-template-monorepo-ethers), [`monorepo-subgraph`](https://github.com/semaphore-protocol/semaphore/tree/main/packages/cli-template-monorepo-subgraph).
+:::
+
+:::info
+The [`semaphore CLI`](https://github.com/semaphore-protocol/semaphore/tree/main/packages/cli) can also be used to get group data from a supported network (e.g. `semaphore get-groups --network sepolia`).
+:::
+
+To start working on your project, install the dependencies:
+
+```bash
+cd my-app
+yarn
+```
+
+## Output
+
+The `create` command will create a directory called my-app (or whatever name you choose) inside the current folder. That directory will contain the initial project structure, which includes a simple contract, a task to deploy it, some tests and a Next.js application (the web-app folder) to interact with that contract.
+
+```
+my-app
+├── .yarn
+├── apps
+│   └── contracts
+│   │   └── contracts
+|   │   │   └── Feedback.sol
+│   │   └── tasks
+|   │   │   └── deploy.ts
+│   │   └── test
+|   │   │   └── Feedback.ts
+│   │   └── hardhat.config.ts
+│   │   └── package.json
+│   │   └── tsconfig.json
+│   └── web-app
+├── .editorconfig
+├── .env
+├── .env.example
+├── .eslintignore
+├── .eslintrc.json
+├── .gitignore
+├── .prettierignore
+├── .prettierrc.json
+├── .yarnrc.yml
+├── package.json
+├── README.md
+└── tsconfig.json
+```
+
+The `Feedback.sol` contract creates a Semaphore group, allows users to join that group with their Semaphore identity, and finally allows group members to send an anonymous feedback.
+
+## Usage
+
+### Compile contracts
+
+Go to the `contracts` folder:
+
+```bash
+cd apps/contracts
+```
+
+And compile your contracts:
+
+```bash
+yarn compile
+```
+
+### Test contracts
+
+Test your contracts:
+
+```bash
+yarn test
+```
+
+Generate a test coverage report:
+
+```bash
+yarn test:coverage
+```
+
+Or a test gas report:
+
+```bash
+yarn test:report-gas
+```
+
+### Deploy contracts
+
+Follow the instructions below to deploy your contracts:
+
+In the project root folder:
+
+1. Add your environment variables in the `.env` file.
+
+   :::note
+   You should at least set a valid Infura API Key (you could use Alchemy as well) and a private key with some ethers.
+   :::
+
+2. Go to the `apps/contracts` folder and deploy your contract.
+
+   ```bash
+   yarn deploy --semaphore <semaphore-address> --network sepolia
+   ```
+
+   :::note
+   Check the Semaphore contract addresses [here](/deployed-contracts).
+   :::
+
+   :::caution
+   The group id is a number.
+   :::
+
+### Start app
+
+Start the application:
+
+```bash
+yarn dev
+```
+
+:::info
+If you want to see the code of a comprehensive application built on top of Semaphore see the [boilerplate](https://github.com/semaphore-protocol/boilerplate/tree/main). For more info about the core libraries, keep reading the next guides.
+:::
+
+
+######
+
+---
+sidebar_position: 1
+title: Identities
+---
+
+import Tabs from "@theme/Tabs"
+import TabItem from "@theme/TabItem"
+
+# Semaphore identities
+
+In order to join a [Semaphore group](/glossary#group), a user must first create a [Semaphore identity](/glossary#identity).
+A Semaphore identity contains three values generated with the identity:
+
+- Private key
+- Public key
+- Commitment
+
+To use and verify the identity, the identity owner (user) must know its private key.
+To prevent fraud, the owner should keep their private key secret.
+
+## Install package
+
+In your code, use the [`@semaphore-protocol/identity`](https://github.com/semaphore-protocol/semaphore/tree/main/packages/identity) package to manage Semaphore identities.
+
+<Tabs
+  defaultValue="npm"
+  groupId="package-managers"
+  values={[
+{label: 'npm', value: 'npm'},
+{label: 'Yarn', value: 'yarn'},
+{label: 'pnpm', value: 'pnpm'}
+]}
+>
+  <TabItem value="npm">
+    ```bash
+    npm install @semaphore-protocol/identity
+    ```
+  </TabItem>
+
+  <TabItem value="yarn">
+    ```bash
+    yarn add @semaphore-protocol/identity
+    ```
+  </TabItem>
+
+  <TabItem value="pnpm">
+    ```bash
+    pnpm add @semaphore-protocol/identity
+    ```
+  </TabItem>
+</Tabs>
+
+:::info
+Semaphore also provides `@semaphore-protocol/core`, which includes the functions of the following core packages: `@semaphore-protocol/identity`, `@semaphore-protocol/group`, `@semaphore-protocol/proof`.
+:::
+
+## Create identities
+
+### Create random identities
+
+To create a random identity, instantiate `Identity` without any parameters. For example:
+
+```ts
+import { Identity } from "@semaphore-protocol/identity"
+
+const { privateKey, publicKey, commitment } = new Identity()
+```
+
+The new identity contains your private key, your public key, and its associated commitment, which serves as a public representation of the identity (similar to an Ethereum address).
+
+### Create deterministic identities
+
+If you pass a previously used private key or any secret value that acts as your private key as parameter, you can deterministically generate a Semaphore identity.
+
+```ts
+const identity1 = new Identity(privateKey)
+// or
+const identity2 = new Identity("secret-value")
+```
+
+:::tip
+Building a system to save or recover secret values of Semaphore identities is nontrivial.
+You may choose to delegate such functionality to existing wallets such as Metamask. For example:
+
+1. In Metamask, a user signs a message with the private key of their Ethereum account.
+2. In your application, the user creates a deterministic identity with the signed message that acts as your Semaphore private key.
+3. The user can now recreate their Semaphore identity whenever they want by signing the same message with their Ethereum account in Metamask.
+   :::
+
+:::warning Privacy risk
+If a user signs the **same message** on multiple websites using MetaMask, all those websites will be able to **generate the same Semaphore identity**. This undermines anonymity and may allow third parties to **link identities across platforms** or even **gain control over a user's identity**.\
+To mitigate this, encourage users to sign **unique messages per application** or implement safeguards that detect and warn about reuse.
+:::
+
+## Sign and verify messages
+
+Semaphore V4 uses asymmetric cryptography and in particular EdDSA to generate the identity keys. It is therefore also possible to sign messages and verify their signatures.
+
+### Sign a message
+
+Any Semaphore identity can sign a message by simply passing a string, number or buffer.
+
+```ts
+const message = "Hello World"
+
+const signature = identity1.signMessage(message)
+```
+
+### Verify a signature
+
+After a message is signed, anyone can verify the signature using the message itself, the signature, and the signer's public key.
+
+```ts
+// Static method.
+Identity.verifySignature(message, signature, identity1.publicKey)
+```
+
+## Export and import an identity
+
+A Semaphore Identity can be exported and then imported later for reuse.
+
+### Export an identity
+
+Returns the private key encoded as a base64 string.
+
+```ts
+import { Identity } from "@semaphore-protocol/identity"
+
+const identity = new Identity()
+
+const privateKey = identity.export()
+```
+
+### Import an identity
+
+Returns a Semaphore identity based on a private key encoded as a base64 string.
+
+```ts
+import { Identity } from "@semaphore-protocol/identity"
+
+const identity = new Identity()
+
+const privateKey = identity.export()
+
+const identity2 = Identity.import(privateKey)
+```
+
+#######
+
+---
+sidebar_position: 3
+title: Proofs
+---
+
+import Tabs from "@theme/Tabs"
+import TabItem from "@theme/TabItem"
+
+# Semaphore proofs
+
+Once a user joins a [Semaphore group](/glossary#group) with their [Semaphore identity](/glossary#identity), the user can send their anonymous [message](/glossary#message) with a zero-knowledge proof that proves the following:
+
+- the user is a member of the group,
+- the same user created the message and the proof.
+
+A unique [nullifier](/glossary#nullifier) is also generated for each proof that can be used to check whether that proof has already been validated.
+
+## Install package
+
+In your code, use the [`@semaphore-protocol/proof`](https://github.com/semaphore-protocol/semaphore/tree/main/packages/proof) package to generate and verify a proof.
+
+<Tabs
+  defaultValue="npm"
+  groupId="package-managers"
+  values={[
+{label: 'npm', value: 'npm'},
+{label: 'Yarn', value: 'yarn'},
+{label: 'pnpm', value: 'pnpm'}
+]}
+>
+  <TabItem value="npm">
+    ```bash
+    npm install @semaphore-protocol/proof
+    ```
+  </TabItem>
+
+  <TabItem value="yarn">
+    ```bash
+    yarn add @semaphore-protocol/proof
+    ```
+  </TabItem>
+
+  <TabItem value="pnpm">
+    ```bash
+    pnpm add @semaphore-protocol/proof
+    ```
+  </TabItem>
+</Tabs>
+
+:::info
+Semaphore also provides `@semaphore-protocol/core`, which includes the functions of the following core packages: `@semaphore-protocol/identity`, `@semaphore-protocol/group`, `@semaphore-protocol/proof`.
+:::
+
+## Generate a proof
+
+### 1. Create the identity
+
+In order for a user to generate a proof, it is necessary to create a Semaphore identity. If you do not know how to
+create an identity, see the previous [guide](/guides/identities) on identities.
+
+### 2. Create the group
+
+Before generating a proof you also need to create a Semaphore group containing the commitment of the Semaphore identity of the user who will generate the proof. If you do not know how to create a group, see the previous [guide](/guides/groups) on groups.
+
+If your group is on-chain, you can use the [`@semaphore-protocol/data`](https://github.com/semaphore-protocol/semaphore/tree/main/packages/data) library to fetch the group members and re-create the off-chain group. For example:
+
+```ts
+import { SemaphoreSubgraph } from "@semaphore-protocol/data"
+import { Group } from "@semaphore-protocol/group"
+
+const semaphoreSubgraph = new SemaphoreSubgraph("sepolia")
+
+const { members } = await semaphoreSubgraph.getGroup("42", { members: true })
+
+const group = new Group(members)
+```
+
+### 3. Choose the scope
+
+Each proof requires a [scope](/glossary#scope), on which each user may only generate one valid proof. The scope, together with the user's private key, is used to generate the nullifier, which is the value you can actually use to check whether a proof with that scope has already been generated by that user. In a voting application where double-voting must be prevented, the scope could be the ballot id, or the Merkle root of the group.
+
+### 4. Generate the anonymous message
+
+Finally, you can generate the proof with the anonymous message using the `generateProof` function. For example:
+
+```ts
+import { generateProof } from "@semaphore-protocol/proof"
+
+const scope = group.root
+const message = 1
+
+const proof = await generateProof(identity, group, message, scope)
+```
+
+## Verify a proof
+
+To verify a proof, pass the proof you generated to the `verifyProof` function. For example:
+
+```ts
+import { verifyProof } from "@semaphore-protocol/proof"
+
+await verifyProof(proof) // true or false.
+```
+
+If you want to validate a proof on-chain, you can use [`@semaphore-protocol/contracts`](https://github.com/semaphore-protocol/semaphore/blob/main/packages/contracts) and the [`Semaphore.sol`](https://github.com/semaphore-protocol/semaphore/blob/main/packages/contracts/contracts/Semaphore.sol) contract, as explained in the previous [guide](/guides/groups#install-package-1), and use the `validateProof` function. For example:
+
+```solidity
+function validateProof(ISemaphore.SemaphoreProof calldata proof) external {
+    semaphore.validateProof(groupId, proof);
+}
+```
+
+####
+
+---
+sidebar_position: 2
+title: Groups
+---
+
+import Tabs from "@theme/Tabs"
+import TabItem from "@theme/TabItem"
+
+# Semaphore groups
+
+A [Semaphore group](/glossary/#group) contains [identity commitments](/glossary/#identity-commitment) of group members.
+Example uses of groups include the following:
+
+- poll question that attendees join to rate an event,
+- ballot that members join to vote on a proposal,
+- whistleblowers who are verified employees of an organization.
+
+:::info
+Semaphore V4 uses the [ZK-Kit](https://github.com/privacy-scaling-explorations/zk-kit) LeanIMT (i.e., Lean Incremental
+Merkle Tree) [Solidity](https://github.com/privacy-scaling-explorations/zk-kit/tree/main/packages/imt.sol/contracts) and
+[JavaScript](https://github.com/privacy-scaling-explorations/zk-kit/tree/main/packages/imt) implementations for managing groups. Groups are Merkle trees, and the group members (i.e., identity commitments) are their leaves.
+:::
+
+## Off-chain groups
+
+Use the [`@semaphore-protocol/group`](https://github.com/semaphore-protocol/semaphore/blob/main/packages/group) package to manage off-chain groups.
+
+### Install package
+
+<Tabs
+  defaultValue="npm"
+  groupId="package-managers"
+  values={[
+{label: 'npm', value: 'npm'},
+{label: 'Yarn', value: 'yarn'},
+{label: 'pnpm', value: 'pnpm'}
+]}
+>
+  <TabItem value="npm">
+    ```bash
+    npm install @semaphore-protocol/group
+    ```
+  </TabItem>
+
+  <TabItem value="yarn">
+    ```bash
+    yarn add @semaphore-protocol/group
+    ```
+  </TabItem>
+
+  <TabItem value="pnpm">
+    ```bash
+    pnpm add @semaphore-protocol/group
+    ```
+  </TabItem>
+</Tabs>
+
+:::info
+Semaphore also provides `@semaphore-protocol/core`, which includes the functions of the following core packages: `@semaphore-protocol/identity`, `@semaphore-protocol/group`, `@semaphore-protocol/proof`.
+:::
+
+### Create a group
+
+To create a group instantiate `Group` without any parameters. For example:
+
+```ts
+import { Group } from "@semaphore-protocol/group"
+
+const group1 = new Group()
+```
+
+You can also initialize a group with multiple members by passing the list of identity commitments as the first parameter when creating the group:
+
+```ts
+const members = [
+  11237622825477336339577122413451117718539783476837539122310492284566644730311n,
+  9332663527862709610616009715800254142772436825222910251631161087138559093425n,
+  13255821893820536903335282929376140649646180444238593676033702344407594536519n
+]
+
+const group2 = new Group(members)
+```
+
+### Add members
+
+Use the `addMember` method to add a member to a group. For example:
+
+```ts
+import { Identity } from "@semaphore-protocol/identity"
+
+const { commitment } = new Identity()
+
+group1.addMember(commitment)
+```
+
+To add a batch of members to a group, pass an array to the `addMembers` method. For example:
+
+```ts
+group1.addMembers(members)
+```
+
+:::caution
+When you use the same Semaphore identity across multiple groups, if an attacker takes control of that identity all the groups it is part of will be compromised. Consider using different identities for each group.
+:::
+
+### Remove or update members
+
+To remove members from a group, pass the member index to the `removeMember` method. For example:
+
+```ts
+group.removeMember(0)
+```
+
+To update members in a group, pass the member index and the new value to the `updateMember` method. For example:
+
+```ts
+group.updateMember(0, 2n)
+```
+
+:::caution
+Removing a member from a group sets its value to 0.
+Given that the member isn't removed, the number of members (i.e., `group.size` on `group.members.length`) doesn't change.
+:::
+
+### Generate a Merkle proof
+
+Semaphore groups are [Merkle trees](/glossary#merkle-tree), and it is therefore possible to calculate the Merkle proof of a group member (i.e., tree leaf) by passing the index of the member to the `generateMerkleProof`. For example:
+
+```ts
+group.generateMerkleProof(0)
+```
+
+## On-chain groups
+
+Semaphore provides [`Semaphore.sol`](https://github.com/semaphore-protocol/semaphore/blob/main/packages/contracts/contracts/Semaphore.sol), a contract designed for managing on-chain groups ([deployed](/deployed-contracts) on major testnets).
+
+Use the [`@semaphore-protocol/contracts`](https://github.com/semaphore-protocol/semaphore/blob/main/packages/contracts) package to import the `ISemaphore.sol` interface in your contract and start using its functions.
+
+### Install package
+
+<Tabs
+  defaultValue="npm"
+  groupId="package-managers"
+  values={[
+{label: 'npm', value: 'npm'},
+{label: 'Yarn', value: 'yarn'},
+{label: 'pnpm', value: 'pnpm'}
+]}
+>
+  <TabItem value="npm">
+    ```bash
+    npm install @semaphore-protocol/contracts
+    ```
+  </TabItem>
+
+  <TabItem value="yarn">
+    ```bash
+    yarn add @semaphore-protocol/contracts
+    ```
+  </TabItem>
+
+  <TabItem value="pnpm">
+    ```bash
+    pnpm add @semaphore-protocol/contracts
+    ```
+  </TabItem>
+</Tabs>
+
+### Create a group
+
+To create a group initialize your contract with the `Semaphore.sol` address.
+The `createGroup` function can be used to create a Semaphore group. For example:
+
+```solidity
+pragma solidity ^0.8.23;
+
+import "@semaphore-protocol/contracts/interfaces/ISemaphore.sol";
+
+contract YourContract {
+    ISemaphore public semaphore;
+
+    uint256 public groupId;
+
+    constructor(ISemaphore _semaphore) {
+        semaphore = _semaphore;
+
+        groupId = semaphore.createGroup();
+    }
+}
+```
+
+`Semaphore.sol` also includes a mechanism to verify Semaphore proofs created with old Merkle tree roots, the duration of which can optionally be defined by the admin in the `createGroup` function. The default value duration is 1 hour and it should be fine for most use-cases. For more context see the issue [#98](https://github.com/semaphore-protocol/semaphore/issues/98).
+
+### Add members
+
+Use the `addMember` function to add a member to a group. For example:
+
+```solidity
+function addMember(uint256 identityCommitment) external {
+    semaphore.addMember(groupId, identityCommitment);
+}
+```
+
+To add a batch of members to a group, pass an array to the `addMembers` function. For example:
+
+```solidity
+function addMembers(uint256[] calldata identityCommitments) external {
+    semaphore.addMembers(groupId, identityCommitments);
+}
+```
+
+### Remove or update members
+
+To update members in a group, pass the identity commitment of the member you want to update, its new identity commitment and the siblings of the Merkle proof for that member. For example:
+
+```solidity
+function updateMember(uint256 identityCommitment, uint256 newIdentityCommitment, uint256[] calldata merkleProofSiblings) external {
+    semaphore.updateMember(groupId, identityCommitment, newIdentityCommitment, merkleProofSiblings);
+}
+```
+
+:::info
+To calculate the Merkle proof of a group member you can use the `generateMerkleProof` method of the JavaScript `Group` class described above.
+:::
+
+To remove members from a group, pass the identity commitment of the member you want to remove and the siblings of the Merkle proof for that member. For example:
+
+```solidity
+function removeMember(uint256 identityCommitment, uint256[] calldata merkleProofSiblings) external {
+    semaphore.removeMember(groupId, identityCommitment, merkleProofSiblings);
+}
+```
+
+:::info
+If you want to see an example of a working contract, have a look at the [`contracts-hardhat`](https://github.com/semaphore-protocol/semaphore/tree/main/packages/cli-template-contracts-hardhat) CLI template. You can also create a project with that template by running `semaphore create my-app --template contracts-hardhat`.
+:::
+
+
+######
+
+---
+sidebar_position: 3
+---
+
+# Contracts
+
+Semaphore contracts are designed with minimal yet essential code, enabling developers to efficiently manage on-chain groups and verify or validate zero-knowledge proofs.
+There are three contracts:
+
+-   [`SemaphoreVerifier.sol`](https://github.com/semaphore-protocol/semaphore/blob/main/packages/contracts/contracts/base/SemaphoreVerifier.sol)
+-   [`SemaphoreGroups.sol`](https://github.com/semaphore-protocol/semaphore/blob/main/packages/contracts/contracts/base/SemaphoreGroups.sol)
+-   [`Semaphore.sol`](https://github.com/semaphore-protocol/semaphore/blob/main/packages/contracts/contracts/Semaphore.sol)
+
+:::info
+To use Semaphore contracts and interfaces in your project,
+install the [`@semaphore-protocol/contracts`](https://github.com/semaphore-protocol/semaphore/tree/main/packages/contracts) NPM package.
+:::
+
+## SemaphoreVerifier.sol
+
+`SemaphoreVerifier.sol` is an extended version of the Groth16 verifier generated by default with [SnarkJS](https://github.com/iden3/snarkjs). It contains a function for verifying proofs and a list of verification keys parameters.
+
+Since the Semaphore circuit is compiled with a `MAX_DEPTH` range from 1 to 32 during the [trusted setup](/glossary#trusted-setup), the verifier must contain the parameters of the verification keys of each instance.
+
+## SemaphoreGroups.sol
+
+`SemaphoreGroups.sol` is an abstract contract which contains the functions required to create on-chain groups, and add/remove/update members. Each group is assigned an admin, which can be an Ethereum account or another contract.
+
+This contract uses the [`LeanIMT.sol`](https://github.com/privacy-scaling-explorations/zk-kit/blob/main/packages/imt.sol/contracts/internal/InternalLeanIMT.sol) ZK-Kit library, an optimized binary incremental Merkle tree with [Poseidon](https://www.poseidon-hash.info).
+
+## Semaphore.sol
+
+`Semaphore.sol` inherits `SemaphoreGroups.sol` and adds functions to verify (`verifyProof`) or validate (`validateProof`) a Semaphore proof. The only constructor parameter is the `SemaphoreVerifier.sol` address, which must be deployed separately.
+
+The `verifyProof` function contains code for checking whether a Semaphore proof is true or false. It is a read-only view function that in addition to verifying the proof also includes a mechanism for keeping track of proofs generated with old Merkle roots, i.e. group instances that contained fewer or different members.
+
+The `validateProof` function first checks whether a proof with the same nullifier has already been validated, and then verifies the proof with the `verifyProof` function and saves the nullifier. This function also creates a log with the group id and the proof, which can then additionally be verified off-chain.
+
+:::info
+Semaphore contracts are deployed on the main testnets and Arbitrum One. See the [deployed contracts](/deployed-contracts) to check the addresses.
+::::
+
+
+#####
+
+---
+sidebar_position: 2
+---
+
+# Circuits
+
+The [Semaphore circuit](https://github.com/semaphore-protocol/semaphore/blob/main/packages/circuits/src/semaphore.circom) is the heart of the protocol and consists of three parts:
+
+-   [Proof of membership](#proof-of-membership)
+-   [Nullifier](#nullifier)
+-   [Message](#message)
+
+![Semaphore circuit](https://github.com/semaphore-protocol/semaphore/raw/main/packages/circuits/scheme.png)
+
+The diagram above shows how the input signals are used in the Semaphore circuit and how the outputs are calculated.
+
+## Proof of membership
+
+The circuit derive the public key from the secret and hashes the public key to generate an identity commitment. Then, it verifies the proof of membership against the Merkle root and the identity commitment.
+
+**Private inputs:**
+
+-   `merkleProofLength`: the actual number of nodes in the Merkle proof path,
+-   `merkleProofIndices[MAX_DEPTH]`: the list of 0s and 1s to calculate the hashes of the nodes at the correct position,
+-   `merkleProofSiblings[MAX_DEPTH]`: the list of siblings nodes to be used to calculate the hashes of the nodes up to the root,
+-   `secret`: the EdDSA [secret scalar](https://www.rfc-editor.org/rfc/rfc8032#section-5.1.5) derived from the private key.
+
+**Public outputs:**
+
+-   `merkleRoot`: The Merkle root of the tree.
+
+## Nullifier
+
+The circuit hashes the secret with the scope and then checks that the result matches the provided nullifier.
+
+**Private inputs:**
+
+-   `secret`: the EdDSA [secret scalar](https://www.rfc-editor.org/rfc/rfc8032#section-5.1.5) derived from the private key.
+
+**Public inputs:**
+
+-   `scope`: the value used like a topic on which users can generate a valid proof only once.
+
+**Public outputs:**
+
+-   `nullifier`: the value designed to be a unique identifier and used to prevent the same proof from being used twice.
+
+## Message
+
+The circuit calculates a dummy square of the message to prevent any tampering with the proof.
+
+**Public inputs:**
+
+-   `message`: the anonymous value the user broadcasts.
+
+
+####
+
+
+Subgraph
+The Graph is a protocol for indexing networks like Ethereum and IPFS. Site owners publish subgraphs that expose site data for anyone to query. Semaphore's subgraph allows you to retrieve data from the Semaphore.sol smart contract.
+
+tip
+The Graph protocol uses the GraphQL query language. For examples, see the GraphQL API documentation. Visit the Semaphore subgraph to see the list of networks supported by Semaphore and its URLs.
+
+Schema
+apps/subgraph/schema.graphql
+type MerkleTree @entity {
+    id: ID!
+    depth: Int!
+    root: BigInt
+    size: Int!
+    group: Group!
+}
+
+type Group @entity {
+    id: ID!
+    timestamp: BigInt!
+    merkleTree: MerkleTree!
+    admin: Bytes
+    members: [Member!] @derivedFrom(field: "group")
+    validatedProofs: [ValidatedProof!] @derivedFrom(field: "group")
+}
+
+type Member @entity {
+    id: ID!
+    timestamp: BigInt!
+    identityCommitment: BigInt!
+    index: Int!
+    group: Group!
+}
+
+type ValidatedProof @entity {
+    id: ID!
+    timestamp: BigInt!
+    message: BigInt!
+    scope: BigInt!
+    merkleTreeRoot: BigInt!
+    merkleTreeDepth: Int!
+    nullifier: BigInt!
+    points: [BigInt!]!
+    group: Group!

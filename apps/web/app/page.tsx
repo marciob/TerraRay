@@ -1,56 +1,103 @@
-export default function Home() {
+"use client";
+
+import { useState } from "react";
+import Link from "next/link";
+import { ArrowRight, TrendingUp, Users, Globe } from "lucide-react";
+import { BrazilMap } from "@/components/dashboard/BrazilMap";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+
+export default function LandingPage() {
+  const [view, setView] = useState<"origination" | "capital">("origination");
+
   return (
-    <main className="mx-auto flex min-h-screen max-w-6xl flex-col gap-12 px-6 py-12 lg:px-8">
-      <header className="flex flex-col gap-4 border-b border-zinc-200 pb-8 dark:border-zinc-800">
-        <p className="text-sm font-medium tracking-wide text-emerald-600">
-          Rayls Hackathon · Brazil Agri Credit
-        </p>
-        <h1 className="text-balance text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50 sm:text-4xl">
-          Multi-farmer ERC-4626 vaults for Brazilian agriculture
-        </h1>
-        <p className="max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">
-          This frontend walks through the full credit lifecycle: underwriting a farmer,
-          funding a loan through a Rayls-powered vault, investor deposits, and on-chain
-          repayments that update yield.
-        </p>
+    <main className="flex min-h-screen flex-col bg-rayls-black text-white overflow-hidden relative">
+      {/* Top Stats Bar */}
+      <header className="z-10 flex flex-col md:flex-row items-center justify-between border-b border-rayls-border bg-rayls-charcoal/50 p-4 backdrop-blur-md">
+        <div className="flex items-center gap-2">
+          <div className="h-6 w-6 rounded-full bg-rayls-lime/20 flex items-center justify-center">
+            <Globe className="h-4 w-4 text-rayls-lime" />
+          </div>
+          <h1 className="text-lg font-bold tracking-tight">RAYLS <span className="font-normal text-rayls-grey">PROTOCOL</span></h1>
+        </div>
+        
+        <div className="flex gap-8 mt-4 md:mt-0">
+          <div className="flex flex-col items-end">
+            <span className="text-[10px] uppercase tracking-wider text-rayls-grey">Total Value Locked</span>
+            <div className="flex items-center gap-2">
+              <span className="text-xl font-mono font-bold text-white drop-shadow-[0_0_10px_rgba(157,140,252,0.5)]">
+                R$ 12.450.000
+              </span>
+            </div>
+          </div>
+          
+          <div className="flex flex-col items-end">
+             <span className="text-[10px] uppercase tracking-wider text-rayls-grey">Active Farmers</span>
+             <span className="text-xl font-mono font-bold text-white">42</span>
+          </div>
+
+          <div className="flex flex-col items-end">
+             <span className="text-[10px] uppercase tracking-wider text-rayls-grey">Avg. Portfolio Yield</span>
+             <div className="flex items-center gap-1">
+                <TrendingUp className="h-4 w-4 text-rayls-lime" />
+                <span className="text-xl font-mono font-bold text-rayls-lime">14.2% APY</span>
+             </div>
+          </div>
+        </div>
       </header>
 
-      <section className="grid gap-6 md:grid-cols-2">
-        <a
-          href="/operator/farmers/new"
-          className="group rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:border-emerald-500/70 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-950"
-        >
-          <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
-            Operator – Underwrite &amp; Approve
-          </h2>
-          <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-            Simulate AI-driven underwriting and register a farmer into the on-chain
-            registry with chosen risk tier and credit limits.
-          </p>
-          <ul className="mt-4 space-y-1 text-xs text-zinc-500 dark:text-zinc-400">
-            <li>• Flow A – Farmer onboarding and approval</li>
-            <li>• Flow B – Create and fund a new note from a vault</li>
-            <li>• Flow D – Record repayments and see updated TVL</li>
-          </ul>
-        </a>
+      {/* Main Content */}
+      <div className="relative flex-1 flex items-center justify-center">
+        <div className="absolute inset-0 z-0">
+            <BrazilMap />
+        </div>
 
-        <a
-          href="/investor/vaults"
-          className="group rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:border-emerald-500/70 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-950"
-        >
-          <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
-            Investor – Vault Explorer
-          </h2>
-          <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-            Browse three predefined vaults, review their risk bands and crop exposure,
-            and simulate a deposit into a diversified pool.
-          </p>
-          <ul className="mt-4 space-y-1 text-xs text-zinc-500 dark:text-zinc-400">
-            <li>• Flow C – Deposit into vaults and see your position</li>
-            <li>• Demo-safe: all data is mocked, no real chain calls yet</li>
-          </ul>
-        </a>
-      </section>
+        {/* Interaction Layer */}
+        <div className="z-10 flex flex-col items-center gap-8">
+          {/* Toggle */}
+          <div className="flex rounded-full border border-rayls-border bg-rayls-charcoal p-1">
+            <button
+              onClick={() => setView("origination")}
+              className={`rounded-full px-6 py-2 text-sm font-medium transition-all ${
+                view === "origination"
+                  ? "bg-rayls-lime text-black shadow-[0_0_15px_rgba(217,249,79,0.3)]"
+                  : "text-rayls-grey hover:text-white"
+              }`}
+            >
+              Origination Desk
+            </button>
+            <button
+              onClick={() => setView("capital")}
+              className={`rounded-full px-6 py-2 text-sm font-medium transition-all ${
+                view === "capital"
+                  ? "bg-rayls-lime text-black shadow-[0_0_15px_rgba(217,249,79,0.3)]"
+                  : "text-rayls-grey hover:text-white"
+              }`}
+            >
+              Capital Markets
+            </button>
+          </div>
+
+          {/* Action Card */}
+          <Card className="w-[350px] border-rayls-border bg-rayls-charcoal/90 backdrop-blur-sm p-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+             <h2 className="mb-2 text-xl font-semibold text-white">
+               {view === "origination" ? "Credit Origination" : "Institutional Vaults"}
+             </h2>
+             <p className="mb-6 text-sm text-rayls-grey">
+               {view === "origination" 
+                 ? "Access AI-powered underwriting and risk assessment for agricultural assets." 
+                 : "Deploy capital into diversified, risk-tranched agricultural credit strategies."}
+             </p>
+             
+             <Link href={view === "origination" ? "/operator/farmers/new" : "/investor/vaults"}>
+               <Button className="w-full bg-rayls-lime text-black hover:bg-rayls-lime/80 group">
+                 {view === "origination" ? "Access Desk" : "View Opportunities"}
+                 <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+               </Button>
+             </Link>
+          </Card>
+        </div>
+      </div>
     </main>
   );
 }
