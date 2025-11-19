@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowRight, TrendingUp, Users, Globe } from "lucide-react";
+import { ArrowRight, TrendingUp } from "lucide-react";
 import { BrazilMap } from "@/components/dashboard/BrazilMap";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -11,17 +11,10 @@ export default function LandingPage() {
   const [view, setView] = useState<"origination" | "capital">("origination");
 
   return (
-    <main className="flex min-h-screen flex-col bg-rayls-black text-white overflow-hidden relative">
-      {/* Top Stats Bar */}
-      <header className="z-10 flex flex-col md:flex-row items-center justify-between border-b border-rayls-border bg-rayls-charcoal/50 p-4 backdrop-blur-md">
-        <div className="flex items-center gap-2">
-          <div className="h-6 w-6 rounded-full bg-rayls-lime/20 flex items-center justify-center">
-            <Globe className="h-4 w-4 text-rayls-lime" />
-          </div>
-          <h1 className="text-lg font-bold tracking-tight">TERRARAY</h1>
-        </div>
-        
-        <div className="flex gap-8 mt-4 md:mt-0">
+    <main className="flex flex-1 flex-col bg-rayls-black text-white overflow-hidden relative">
+      {/* Top Stats Bar - Added margin-top to avoid overlap with fixed header */}
+      <div className="z-10 flex flex-col md:flex-row items-center justify-end border-b border-rayls-border bg-rayls-charcoal/50 p-4 backdrop-blur-md">
+        <div className="flex gap-8">
           <div className="flex flex-col items-end">
             <span className="text-[10px] uppercase tracking-wider text-rayls-grey">Total Value Locked</span>
             <div className="flex items-center gap-2">
@@ -44,7 +37,7 @@ export default function LandingPage() {
              </div>
           </div>
         </div>
-      </header>
+      </div>
 
       {/* Main Content */}
       <div className="relative flex-1 flex items-center justify-center">

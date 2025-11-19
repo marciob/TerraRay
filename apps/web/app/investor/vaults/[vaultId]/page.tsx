@@ -4,6 +4,8 @@ import { notFound, useParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { ArrowDown, Wallet, Info, TrendingUp } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { useAccount } from "wagmi";
+import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { DepositSchema, type DepositPayload } from "@/app/lib/schemas";
 import { useDemo } from "@/app/lib/demo-context";
 import { Button } from "@/components/ui/button";
@@ -25,6 +27,7 @@ const chartData = [
 export default function VaultDetailPage() {
   const params = useParams<{ vaultId: string }>();
   const { vaults, notes, positions, deposit } = useDemo();
+  const { isConnected } = useAccount();
   const [depositAmount, setDepositAmount] = useState<string>("");
   
   const vaultId = decodeURIComponent(params.vaultId);
@@ -144,64 +147,72 @@ export default function VaultDetailPage() {
 
             {/* Right Sidebar (1/3): Deposit */}
             <div className="space-y-6">
-                <Card className="bg-rayls-charcoal border-rayls-border p-6 sticky top-8">
+                <Card className="bg-rayls-charcoal border-rayls-border p-6 sticky top-24">
                     <h2 className="text-lg font-semibold text-white mb-6">Liquidity Provision</h2>
                     
-                    {/* Swap Interface */}
-                    <form onSubmit={handleDeposit} className="space-y-4 relative">
-                         <div className="bg-rayls-dark p-4 rounded-lg border border-rayls-border">
-                            <div className="flex justify-between text-xs text-rayls-grey mb-2">
-                                <span>You Deposit</span>
-                                <span className="flex items-center gap-1"><Wallet className="h-3 w-3" /> Balance: $50k</span>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <Input 
-                                    type="number" 
-                                    placeholder="0.00" 
-                                    className="border-none bg-transparent text-2xl font-mono p-0 focus-visible:ring-0 h-auto placeholder:text-rayls-grey/30"
-                                    value={depositAmount}
-                                    onChange={(e) => setDepositAmount(e.target.value)}
-                                />
-                                <Badge className="bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 border-none">USDC</Badge>
-                            </div>
-                         </div>
-
-                         <div className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 top-[48%] z-10">
-                             <div className="bg-rayls-black rounded-full p-2 border border-rayls-border text-rayls-grey">
-                                 <ArrowDown className="h-4 w-4" />
+                    {!isConnected ? (
+                        <div className="text-center py-8 space-y-4">
+                             <p className="text-sm text-rayls-grey">Connect your wallet to access this institutional vault.</p>
+                             <div className="flex justify-center">
+                                 <ConnectButton label="Connect Wallet" />
                              </div>
-                         </div>
-
-                         <div className="bg-rayls-dark p-4 rounded-lg border border-rayls-border">
-                            <div className="flex justify-between text-xs text-rayls-grey mb-2">
-                                <span>You Receive</span>
-                                <span>(Estimated)</span>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <div className="text-2xl font-mono text-white flex-1 truncate">
-                                    {depositAmount ? (Number(depositAmount) * 1).toFixed(2) : "0.00"}
+                        </div>
+                    ) : (
+                        <form onSubmit={handleDeposit} className="space-y-4 relative">
+                             <div className="bg-rayls-dark p-4 rounded-lg border border-rayls-border">
+                                <div className="flex justify-between text-xs text-rayls-grey mb-2">
+                                    <span>You Deposit</span>
+                                    <span className="flex items-center gap-1"><Wallet className="h-3 w-3" /> Balance: $50k</span>
                                 </div>
-                                <Badge className="bg-rayls-lime/20 text-rayls-lime hover:bg-rayls-lime/30 border-none">trCERRADO</Badge>
-                            </div>
-                         </div>
-
-                         <div className="bg-rayls-black/50 p-3 rounded-lg text-xs space-y-2">
-                             <div className="flex justify-between text-rayls-grey">
-                                 <span>Projected Earnings (12m)</span>
-                                 <span className="text-rayls-lime">
-                                     {depositAmount ? `+ ${(Number(depositAmount) * vault.baseApr).toLocaleString('en-US', { style: 'currency', currency: 'USD' })}` : '--'}
-                                 </span>
+                                <div className="flex items-center gap-3">
+                                    <Input 
+                                        type="number" 
+                                        placeholder="0.00" 
+                                        className="border-none bg-transparent text-2xl font-mono p-0 focus-visible:ring-0 h-auto placeholder:text-rayls-grey/30"
+                                        value={depositAmount}
+                                        onChange={(e) => setDepositAmount(e.target.value)}
+                                    />
+                                    <Badge className="bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 border-none">USDC</Badge>
+                                </div>
                              </div>
-                              <div className="flex justify-between text-rayls-grey">
-                                 <span>Protocol Fee</span>
-                                 <span>0.1%</span>
-                             </div>
-                         </div>
 
-                         <Button type="submit" className="w-full bg-white text-black hover:bg-gray-200 font-bold h-12">
-                             Confirm Deposit
-                         </Button>
-                    </form>
+                             <div className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 top-[48%] z-10">
+                                 <div className="bg-rayls-black rounded-full p-2 border border-rayls-border text-rayls-grey">
+                                     <ArrowDown className="h-4 w-4" />
+                                 </div>
+                             </div>
+
+                             <div className="bg-rayls-dark p-4 rounded-lg border border-rayls-border">
+                                <div className="flex justify-between text-xs text-rayls-grey mb-2">
+                                    <span>You Receive</span>
+                                    <span>(Estimated)</span>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <div className="text-2xl font-mono text-white flex-1 truncate">
+                                        {depositAmount ? (Number(depositAmount) * 1).toFixed(2) : "0.00"}
+                                    </div>
+                                    <Badge className="bg-rayls-lime/20 text-rayls-lime hover:bg-rayls-lime/30 border-none">trCERRADO</Badge>
+                                </div>
+                             </div>
+
+                             <div className="bg-rayls-black/50 p-3 rounded-lg text-xs space-y-2">
+                                 <div className="flex justify-between text-rayls-grey">
+                                     <span>Projected Earnings (12m)</span>
+                                     <span className="text-rayls-lime">
+                                         {depositAmount ? `+ ${(Number(depositAmount) * vault.baseApr).toLocaleString('en-US', { style: 'currency', currency: 'USD' })}` : '--'}
+                                     </span>
+                                 </div>
+                                  <div className="flex justify-between text-rayls-grey">
+                                     <span>Protocol Fee</span>
+                                     <span>0.1%</span>
+                                 </div>
+                             </div>
+
+                             <Button type="submit" className="w-full bg-white text-black hover:bg-gray-200 font-bold h-12">
+                                 Confirm Deposit
+                             </Button>
+                        </form>
+                    )}
                 </Card>
 
                 {/* Holdings Card */}

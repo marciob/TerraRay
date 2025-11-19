@@ -3,6 +3,7 @@ import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 import { cn } from "@/lib/utils";
+import { Header } from "@/components/layout/Header";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -15,9 +16,9 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Rayls – Institutional Capital Protocol",
+  title: "TerraRay – Institutional Capital Protocol",
   description:
-    "Institutional-grade agricultural credit origination and capital markets protocol.",
+    "Institutional-grade agricultural credit origination and capital markets protocol on Rayls.",
 };
 
 export default function RootLayout({
@@ -30,6 +31,7 @@ export default function RootLayout({
       <body className={cn(inter.variable, jetbrainsMono.variable, "antialiased bg-rayls-black text-white min-h-screen")}>
         <Providers>
           <div className="flex flex-col min-h-screen">
+            <Header />
             {children}
             <footer className="py-4 text-center text-[10px] text-rayls-grey border-t border-rayls-border mt-auto">
               Settlement via <span className="text-rayls-lime">Rayls</span> Public Chain. PII secured off-chain via Rayls Private subnet.
