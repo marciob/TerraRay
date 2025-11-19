@@ -10,33 +10,45 @@ import * as Contracts from "./index.js";
 
 declare module "@nomicfoundation/hardhat-ethers/types" {
   interface HardhatEthersHelpers extends HardhatEthersHelpersBase {
-  getContractFactory(name: 'AgroVault', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.AgroVault__factory>
+  getContractFactory(name: 'AccessControl', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.AccessControl__factory>
+getContractFactory(name: 'AgroVault', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.AgroVault__factory>
 getContractFactory(name: 'CreditPassport', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.CreditPassport__factory>
 getContractFactory(name: 'FarmerNote', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.FarmerNote__factory>
 getContractFactory(name: 'FarmerRegistry', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.FarmerRegistry__factory>
 getContractFactory(name: 'InvestorWhitelist', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.InvestorWhitelist__factory>
 getContractFactory(name: 'MockStablecoin', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.MockStablecoin__factory>
+getContractFactory(name: 'RaylsSemaphore', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.RaylsSemaphore__factory>
+getContractFactory(name: 'RaylsSemaphoreVerifier', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.RaylsSemaphoreVerifier__factory>
 
-  getContractAt(name: 'AgroVault', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.AgroVault>
+  getContractAt(name: 'AccessControl', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.AccessControl>
+getContractAt(name: 'AgroVault', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.AgroVault>
 getContractAt(name: 'CreditPassport', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.CreditPassport>
 getContractAt(name: 'FarmerNote', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.FarmerNote>
 getContractAt(name: 'FarmerRegistry', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.FarmerRegistry>
 getContractAt(name: 'InvestorWhitelist', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.InvestorWhitelist>
 getContractAt(name: 'MockStablecoin', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.MockStablecoin>
+getContractAt(name: 'RaylsSemaphore', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.RaylsSemaphore>
+getContractAt(name: 'RaylsSemaphoreVerifier', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.RaylsSemaphoreVerifier>
 
-  deployContract(name: 'AgroVault', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.AgroVault>
+  deployContract(name: 'AccessControl', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.AccessControl>
+deployContract(name: 'AgroVault', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.AgroVault>
 deployContract(name: 'CreditPassport', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CreditPassport>
 deployContract(name: 'FarmerNote', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.FarmerNote>
 deployContract(name: 'FarmerRegistry', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.FarmerRegistry>
 deployContract(name: 'InvestorWhitelist', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.InvestorWhitelist>
 deployContract(name: 'MockStablecoin', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.MockStablecoin>
+deployContract(name: 'RaylsSemaphore', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.RaylsSemaphore>
+deployContract(name: 'RaylsSemaphoreVerifier', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.RaylsSemaphoreVerifier>
 
-  deployContract(name: 'AgroVault', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.AgroVault>
+  deployContract(name: 'AccessControl', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.AccessControl>
+deployContract(name: 'AgroVault', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.AgroVault>
 deployContract(name: 'CreditPassport', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CreditPassport>
 deployContract(name: 'FarmerNote', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.FarmerNote>
 deployContract(name: 'FarmerRegistry', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.FarmerRegistry>
 deployContract(name: 'InvestorWhitelist', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.InvestorWhitelist>
 deployContract(name: 'MockStablecoin', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.MockStablecoin>
+deployContract(name: 'RaylsSemaphore', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.RaylsSemaphore>
+deployContract(name: 'RaylsSemaphoreVerifier', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.RaylsSemaphoreVerifier>
 
     // default types
     getContractFactory(
